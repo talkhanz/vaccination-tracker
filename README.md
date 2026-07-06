@@ -94,20 +94,77 @@ for everyday use.
 
 To use it **without a running dev server**, publish the JS bundle to Expo's
 cloud once with **EAS Update**. Expo Go then downloads it from Expo's servers —
-no computer, no same-Wi-Fi requirement:
+no computer, no same-Wi-Fi requirement.
 
-```bash
-npx expo install expo-updates      # mechanism that fetches the hosted JS
-eas login                          # free Expo account
-eas update:configure               # link the project to EAS
-eas update --branch preview --message "v1"
-```
+This project already includes the two pieces needed for this: the
+[`expo-updates`](https://docs.expo.dev/versions/latest/sdk/updates/) package and
+an [`eas.json`](eas.json) with a `preview` channel. Follow these steps to
+reproduce a publish from a clean checkout:
 
-The last command prints a **link + QR code**. Open it in Expo Go once; it runs
-from Expo's cloud and stays in Expo Go's "Recently opened" list so it reopens
-without re-scanning. Publish improvements later by re-running `eas update`. This
-works because every native module this app uses (date picker, notifications,
-local storage) is already built into the Expo Go runtime.
+**One-time setup**
+
+1. Create a **free Expo account** at https://expo.dev/signup (remember the
+   username/password — that account owns your published updates).
+2. Install the EAS CLI and dependencies:
+   ```bash
+   npm install                    # if you haven't already
+   npm install -g eas-cli         # or use `npx eas-cli@latest` in place of `eas`
+   ```
+3. Sign in:
+   ```bash
+   eas login
+   ```
+4. Link this project to your Expo account. This writes an `extra.eas.projectId`
+   into `app.json`:
+   ```bash
+   eas init
+   ```
+5. Configure updates. This adds the `updates.url` and a `runtimeVersion` to
+   `app.json` so the app knows where to fetch published bundles from:
+   ```bash
+   eas update:configure
+   ```
+   > Steps 4–5 edit `app.json` (and may touch `eas.json`) — commit those changes
+   > so the setup is reproducible next time.
+
+**Publish (repeat this whenever you change the app)**
+
+6. Bundle the current app and upload it to the `preview` branch:
+   ```bash
+   eas update --branch preview --message "First version"
+   ```
+   The command prints a **QR code and a link** (also visible later at
+   `https://expo.dev` → your project → **Updates**).
+
+**Open it on the iPhone**
+
+7. Install **Expo Go** from the App Store (if not already), then either:
+   - point the **Camera** app at the QR code and tap the banner, or
+   - open the printed link on the phone.
+
+   Expo Go downloads the published bundle from Expo's cloud and runs it — your
+   computer can be off. It stays in Expo Go's **Recently opened** list, so it
+   reopens with one tap; keep the link saved as a backup entry point.
+
+**Ship an update later**
+
+8. Make your changes, then re-run step 6 (`eas update --branch preview ...`).
+   The next time the app opens in Expo Go it picks up the new version.
+
+This works because every native module this app uses (date picker,
+notifications, local storage, updates) is already built into the Expo Go
+runtime. If you ever add a *custom* native module that Expo Go doesn't include,
+Expo Go can no longer run it and you'd need a development build instead.
+
+**Troubleshooting**
+
+- *"No compatible build/update found" or nothing loads in Expo Go* — the Expo Go
+  app on your phone must support this project's Expo SDK (57). Update Expo Go
+  from the App Store, or keep the project on the SDK your Expo Go supports.
+- *`eas` command not found* — either `npm install -g eas-cli`, or prefix every
+  command with `npx`, e.g. `npx eas-cli@latest update --branch preview`.
+- *Wrong account owns the update* — run `eas whoami` to check who you're logged
+  in as; `eas logout` then `eas login` to switch.
 
 **Limitations of the Expo Go route** (it's a preview tool, not a store app):
 
