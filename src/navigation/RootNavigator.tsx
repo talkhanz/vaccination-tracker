@@ -12,10 +12,12 @@ import { rescheduleReminders } from '../logic/notifications';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ScheduleScreen } from '../screens/ScheduleScreen';
+import { TimelineScreen } from '../screens/TimelineScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { VaccineDetailScreen } from '../screens/VaccineDetailScreen';
 import { RecordDoseScreen } from '../screens/RecordDoseScreen';
+import { PlanDoseScreen } from '../screens/PlanDoseScreen';
 import { EditChildScreen } from '../screens/EditChildScreen';
 import { ManageVaccinesScreen } from '../screens/ManageVaccinesScreen';
 
@@ -37,7 +39,8 @@ const navTheme = {
 const TAB_ICONS: Record<keyof TabParamList, [string, string]> = {
   Home: ['home', 'home-outline'],
   Schedule: ['calendar', 'calendar-outline'],
-  History: ['time', 'time-outline'],
+  Timeline: ['git-commit', 'git-commit-outline'],
+  History: ['reader', 'reader-outline'],
   Settings: ['settings', 'settings-outline'],
 };
 
@@ -60,6 +63,7 @@ function Tabs() {
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Schedule" component={ScheduleScreen} />
+      <Tab.Screen name="Timeline" component={TimelineScreen} />
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
@@ -108,6 +112,11 @@ export function RootNavigator() {
             name="RecordDose"
             component={RecordDoseScreen}
             options={{ title: 'Record a dose', presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="PlanDose"
+            component={PlanDoseScreen}
+            options={{ title: 'Plan appointment', presentation: 'modal' }}
           />
           <Stack.Screen name="EditChild" component={EditChildScreen} options={{ title: 'Edit profile' }} />
           <Stack.Screen

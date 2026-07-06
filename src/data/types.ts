@@ -11,6 +11,13 @@ export interface Child {
   sex?: 'female' | 'male' | 'unspecified';
 }
 
+/**
+ * Planned (booked) appointment dates for doses not yet administered, keyed by
+ * `${vaccineId}:${doseNumber}` → ISO date. Lets a parent schedule a future
+ * appointment on the timeline; cleared automatically once the dose is recorded.
+ */
+export type PlannedDoses = Record<string, string>;
+
 /** A single administered dose recorded by the parent. */
 export interface DoseRecord {
   id: string;

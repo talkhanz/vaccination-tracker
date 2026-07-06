@@ -10,17 +10,20 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { Child, DoseRecord, Settings, DEFAULT_SETTINGS } from '../data/types';
+import { Child, DoseRecord, PlannedDoses, Settings, DEFAULT_SETTINGS } from '../data/types';
 import {
   clearAll as clearAllStorage,
   deleteRecord as deleteRecordStorage,
   getChild,
+  getPlanned,
   getRecords,
   getSettings,
+  savePlanned as savePlannedStorage,
   saveChild as saveChildStorage,
   saveSettings as saveSettingsStorage,
   upsertRecord as upsertRecordStorage,
 } from '../storage/store';
+import { doseKey } from '../logic/scheduling';
 import {
   computeSchedule,
   DoseSchedule,
@@ -37,11 +40,14 @@ interface AppState {
   schedule: DoseSchedule[];
   summary: ScheduleSummary | null;
   activeVaccineIds: string[];
+  plannedDates: PlannedDoses;
 
   saveChild: (child: Child) => Promise<void>;
   upsertRecord: (record: DoseRecord) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   saveSettings: (settings: Settings) => Promise<void>;
+  /** Book (iso) or clear (null) a planned appointment date for a pending dose. */
+  setPlannedDate: (vaccineId: string, doseNumber: number, iso: string | null) => Promise<void>;
   resetEverything: () => Promise<void>;
 }
 
@@ -52,17 +58,20 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
   const [child, setChild] = useState<Child | null>(null);
   const [records, setRecords] = useState<DoseRecord[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [plannedDates, setPlannedDates] = useState<PlannedDoses>({});
 
   useEffect(() => {
     (async () => {
-      const [c, r, s] = await Promise.all([
+      const [c, r, s, p] = await Promise.all([
         getChild(),
         getRecords(),
         getSettings(),
+        getPlanned(),
       ]);
       setChild(c);
       setRecords(r);
       setSettings(s);
+      setPlannedDates(p);
       setLoading(false);
     })();
   }, []);
@@ -87,11 +96,26 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     setSettings(next);
   }, []);
 
+  const setPlannedDate = useCallback(
+    async (vaccineId: string, doseNumber: number, iso: string | null) => {
+      setPlannedDates((prev) => {
+        const next = { ...prev };
+        const k = doseKey(vaccineId, doseNumber);
+        if (iso) next[k] = iso;
+        else delete next[k];
+        savePlannedStorage(next);
+        return next;
+      });
+    },
+    []
+  );
+
   const resetEverything = useCallback(async () => {
     await clearAllStorage();
     setChild(null);
     setRecords([]);
     setSettings(DEFAULT_SETTINGS);
+    setPlannedDates({});
   }, []);
 
   // Which vaccines to track — the parent's selection, or the sensible default.
@@ -100,10 +124,11 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     [settings.activeVaccineIds]
   );
 
-  // Recompute the schedule whenever the child, records, or selection change.
+  // Recompute the schedule whenever the child, records, selection, or booked
+  // appointments change.
   const schedule = useMemo(
-    () => (child ? computeSchedule(child, records, activeVaccineIds) : []),
-    [child, records, activeVaccineIds]
+    () => (child ? computeSchedule(child, records, activeVaccineIds, plannedDates) : []),
+    [child, records, activeVaccineIds, plannedDates]
   );
   const summary = useMemo(
     () => (child ? summarize(schedule) : null),
@@ -118,10 +143,12 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     schedule,
     summary,
     activeVaccineIds,
+    plannedDates,
     saveChild,
     upsertRecord,
     deleteRecord,
     saveSettings,
+    setPlannedDate,
     resetEverything,
   };
 

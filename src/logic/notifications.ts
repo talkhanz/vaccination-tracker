@@ -3,8 +3,8 @@
 // so the rest of the app never has to care whether reminders are available.
 
 import { Platform } from 'react-native';
-import { DoseSchedule } from './scheduling';
-import { addMonths, toISODate } from './dates';
+import { DoseSchedule, effectiveDate } from './scheduling';
+import { toISODate } from './dates';
 
 let Notifications: any = null;
 function getModule() {
@@ -60,13 +60,18 @@ export async function rescheduleReminders(
       .slice(0, 30); // keep well under OS scheduled-notification limits
 
     for (const item of pending) {
-      const fire = addMonths(item.dueDate, 0);
+      // Remind ahead of the booked appointment if there is one, else the due date.
+      const target = effectiveDate(item);
+      const fire = new Date(target.getTime());
       fire.setDate(fire.getDate() - leadDays);
       if (fire.getTime() <= now.getTime()) continue;
+      const kind = item.plannedDate ? 'appointment' : 'is recommended around';
       await N.scheduleNotificationAsync({
         content: {
           title: `${childName}'s vaccine coming up`,
-          body: `${item.vaccine.name} — ${item.dose.label} is recommended around ${toISODate(item.dueDate)}.`,
+          body: item.plannedDate
+            ? `${item.vaccine.name} — ${item.dose.label} appointment on ${toISODate(target)}.`
+            : `${item.vaccine.name} — ${item.dose.label} ${kind} ${toISODate(target)}.`,
         },
         trigger: { type: 'date', date: fire },
       });

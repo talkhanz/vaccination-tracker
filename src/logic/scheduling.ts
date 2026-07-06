@@ -3,13 +3,18 @@
 // is completed, overdue, due soon, or upcoming, plus the recommended due date.
 
 import { CDC_SCHEDULE, Vaccine, VaccineDose } from '../data/schedule';
-import { Child, DoseRecord } from '../data/types';
+import { Child, DoseRecord, PlannedDoses } from '../data/types';
 import { addMonths, daysBetween, parseISO, today } from './dates';
 
 export type DoseStatus = 'completed' | 'overdue' | 'dueSoon' | 'upcoming';
 
 /** How many days ahead of the due date we start calling a dose "due soon". */
 export const DUE_SOON_WINDOW_DAYS = 45;
+
+/** Stable key for a specific dose, used for planned-appointment lookups. */
+export function doseKey(vaccineId: string, doseNumber: number): string {
+  return `${vaccineId}:${doseNumber}`;
+}
 
 export interface DoseSchedule {
   vaccine: Vaccine;
@@ -21,6 +26,17 @@ export interface DoseSchedule {
   daysUntilDue: number;
   /** The matching recorded dose, when completed. */
   record?: DoseRecord;
+  /** A booked appointment date for a pending dose, if the parent set one. */
+  plannedDate?: Date;
+}
+
+/**
+ * The date to place a dose at on a calendar timeline: when it was actually
+ * given, else its booked appointment, else its recommended due date.
+ */
+export function effectiveDate(item: DoseSchedule): Date {
+  if (item.record) return parseISO(item.record.dateAdministered);
+  return item.plannedDate ?? item.dueDate;
 }
 
 function matchRecord(
@@ -47,7 +63,8 @@ function statusFor(
 export function computeSchedule(
   child: Child,
   records: DoseRecord[],
-  activeVaccineIds?: string[]
+  activeVaccineIds?: string[],
+  planned?: PlannedDoses
 ): DoseSchedule[] {
   const birth = parseISO(child.birthDate);
   const t = today();
@@ -60,12 +77,16 @@ export function computeSchedule(
       const dueDate = addMonths(birth, dose.recommendedAgeMonths);
       const record = matchRecord(records, vaccine.id, dose.doseNumber);
       const daysUntilDue = daysBetween(t, dueDate);
+      // A booked appointment only applies while the dose is still pending.
+      const plannedISO = planned?.[doseKey(vaccine.id, dose.doseNumber)];
+      const plannedDate = !record && plannedISO ? parseISO(plannedISO) : undefined;
       out.push({
         vaccine,
         dose,
         record,
         dueDate,
         daysUntilDue,
+        plannedDate,
         status: statusFor(record, daysUntilDue),
       });
     }
@@ -199,4 +220,92 @@ export function groupByAgeBand(schedule: DoseSchedule[]): TimelineBand[] {
       )
       .sort((a, b) => a.dose.recommendedAgeMonths - b.dose.recommendedAgeMonths),
   })).filter((b) => b.doses.length > 0);
+}
+
+// ---- Calendar timeline ------------------------------------------------------
+
+export interface TimelineEntry {
+  key: string;
+  item: DoseSchedule;
+  /** Where this dose sits on the calendar (given/planned/due date). */
+  date: Date;
+  /** True once given; distinguishes recorded history from projections. */
+  administered: boolean;
+  /** True when the parent booked an appointment for a still-pending dose. */
+  planned: boolean;
+}
+
+export interface TimelineMonth {
+  key: string;
+  label: string;
+  year: number;
+  monthIndex: number;
+  entries: TimelineEntry[];
+}
+
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/** Build a chronological, month-grouped calendar timeline from a schedule. */
+export function buildTimeline(schedule: DoseSchedule[]): TimelineMonth[] {
+  const entries: TimelineEntry[] = schedule.map((item) => ({
+    key: doseKey(item.vaccine.id, item.dose.doseNumber),
+    item,
+    date: effectiveDate(item),
+    administered: !!item.record,
+    planned: !item.record && !!item.plannedDate,
+  }));
+
+  entries.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const months = new Map<string, TimelineMonth>();
+  for (const entry of entries) {
+    const y = entry.date.getFullYear();
+    const m = entry.date.getMonth();
+    const key = `${y}-${m}`;
+    let bucket = months.get(key);
+    if (!bucket) {
+      bucket = { key, label: `${MONTH_NAMES[m]} ${y}`, year: y, monthIndex: m, entries: [] };
+      months.set(key, bucket);
+    }
+    bucket.entries.push(entry);
+  }
+
+  return Array.from(months.values()).sort((a, b) =>
+    a.year !== b.year ? a.year - b.year : a.monthIndex - b.monthIndex
+  );
+}
+
+export interface AsOfSummary {
+  /** Doses actually administered on or before the reference date. */
+  given: number;
+  /** Pending doses expected (due or booked) on or before the reference date. */
+  expected: number;
+  /** Doses still ahead after the reference date. */
+  upcoming: number;
+}
+
+/**
+ * Snapshot of where things stand as of an arbitrary date — powering the
+ * timeline's date scrubber ("As of Aug 2026: 8 given, 2 due, 30 upcoming").
+ */
+export function summarizeAsOf(schedule: DoseSchedule[], asOf: Date): AsOfSummary {
+  const ref = asOf.getTime();
+  let given = 0;
+  let expected = 0;
+  let upcoming = 0;
+  for (const item of schedule) {
+    const when = effectiveDate(item).getTime();
+    if (item.record) {
+      if (when <= ref) given += 1;
+      else upcoming += 1; // recorded with a future date (unusual, but handled)
+    } else if (when <= ref) {
+      expected += 1;
+    } else {
+      upcoming += 1;
+    }
+  }
+  return { given, expected, upcoming };
 }

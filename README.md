@@ -14,6 +14,11 @@ Recommended Child & Adolescent Immunization Schedule (2025)**.
   card with a one-tap way to record the dose.
 - **Schedule** — browse every vaccine by series or along an age timeline, each
   dose tagged Done / Overdue / Due soon / Upcoming with its recommended date.
+- **Timeline** — a calendar-time view of every dose across the past and future:
+  administered doses at the date given, pending doses at their booked
+  appointment (or CDC-recommended date). A date scrubber lets you jump to any
+  past or future date and see an "as of then" snapshot (given / due / ahead),
+  and you can **book a planned appointment date** on any pending dose.
 - **Vaccine detail** — what each vaccine protects against, CDC series notes,
   per-dose timing, and a link out to the relevant CDC.gov page.
 - **History** — a running log of every recorded dose (date, provider, lot #,
@@ -63,17 +68,18 @@ src/
   data/
     schedule.ts       # CDC 2025 schedule as structured data (source of truth)
     vaccineMeta.ts    # which vaccines are active by default; variant groups
-    types.ts          # Child, DoseRecord, Settings models
+    types.ts          # Child, DoseRecord, PlannedDoses, Settings models
   logic/
-    scheduling.ts     # the engine: computes status + due dates per dose
+    scheduling.ts     # the engine: status + due dates, timeline, as-of summary
     dates.ts          # dependency-free date helpers
     validation.ts     # birth-date / dose-date validation
     notifications.ts  # local reminder scheduling (safe no-op on web)
-  storage/store.ts    # AsyncStorage CRUD
+  storage/store.ts    # AsyncStorage CRUD (child, records, planned dates, settings)
   state/AppContext.tsx# app-wide state + derived schedule
   components/          # Card, Button, DoseRow, DateField, ChildForm, ...
-  screens/            # Dashboard, Schedule, VaccineDetail, RecordDose, History,
-                      #   Settings, EditChild, ManageVaccines, Onboarding
+  screens/            # Dashboard, Schedule, Timeline, VaccineDetail, RecordDose,
+                      #   PlanDose, History, Settings, EditChild, ManageVaccines,
+                      #   Onboarding
   navigation/         # tab + stack wiring
 theme/theme.ts        # colors, spacing, typography tokens
 ```

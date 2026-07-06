@@ -76,6 +76,15 @@ export function VaccineDetailScreen({ route, navigation }: Props) {
                   : `${item.status === 'overdue' ? 'Was due' : 'Due'} ${formatRelative(item.dueDate)} (${formatDate(item.dueDate)})`}
               </Text>
 
+              {!done && item.plannedDate ? (
+                <View style={styles.bookedRow}>
+                  <Ionicons name="calendar" size={14} color={colors.primary} />
+                  <Text style={styles.bookedText}>
+                    Appointment booked for {formatDate(item.plannedDate)}
+                  </Text>
+                </View>
+              ) : null}
+
               {item.dose.notes ? <Text style={styles.doseNote}>{item.dose.notes}</Text> : null}
 
               <View style={{ marginTop: spacing.md }}>
@@ -92,16 +101,30 @@ export function VaccineDetailScreen({ route, navigation }: Props) {
                     }
                   />
                 ) : (
-                  <Button
-                    title="Mark as given"
-                    icon={<Ionicons name="checkmark" size={18} color={colors.white} />}
-                    onPress={() =>
-                      navigation.navigate('RecordDose', {
-                        vaccineId: vaccine.id,
-                        doseNumber: item.dose.doseNumber,
-                      })
-                    }
-                  />
+                  <View style={styles.doseActions}>
+                    <Button
+                      title="Mark as given"
+                      icon={<Ionicons name="checkmark" size={18} color={colors.white} />}
+                      onPress={() =>
+                        navigation.navigate('RecordDose', {
+                          vaccineId: vaccine.id,
+                          doseNumber: item.dose.doseNumber,
+                        })
+                      }
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      title={item.plannedDate ? 'Edit date' : 'Plan'}
+                      variant="secondary"
+                      icon={<Ionicons name="calendar-outline" size={18} color={colors.primaryDark} />}
+                      onPress={() =>
+                        navigation.navigate('PlanDose', {
+                          vaccineId: vaccine.id,
+                          doseNumber: item.dose.doseNumber,
+                        })
+                      }
+                    />
+                  </View>
                 )}
               </View>
             </Card>
@@ -152,6 +175,9 @@ const styles = StyleSheet.create({
   doseStatus: { fontSize: 12, fontWeight: '800' },
   doseWhen: { ...typography.small, color: colors.text, marginTop: spacing.md },
   doseNote: { ...typography.small, color: colors.textMuted, marginTop: 6, lineHeight: 18, fontStyle: 'italic' },
+  doseActions: { flexDirection: 'row', gap: spacing.sm },
+  bookedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm },
+  bookedText: { ...typography.small, color: colors.primary, fontWeight: '600' },
 
   disclaimer: { ...typography.small, color: colors.textFaint, marginTop: spacing.md, textAlign: 'center', lineHeight: 18 },
 });

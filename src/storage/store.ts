@@ -3,12 +3,13 @@
 // truth for reading/writing the child, dose records, and settings.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Child, DoseRecord, Settings, DEFAULT_SETTINGS } from '../data/types';
+import { Child, DoseRecord, PlannedDoses, Settings, DEFAULT_SETTINGS } from '../data/types';
 
 const KEYS = {
   child: 'vx.child',
   records: 'vx.records',
   settings: 'vx.settings',
+  planned: 'vx.planned',
 };
 
 /** Simple id generator that doesn't need a native crypto dependency. */
@@ -55,6 +56,17 @@ export async function deleteRecord(id: string): Promise<DoseRecord[]> {
   return records;
 }
 
+// ---- Planned appointment dates ---------------------------------------------
+
+export async function getPlanned(): Promise<PlannedDoses> {
+  const raw = await AsyncStorage.getItem(KEYS.planned);
+  return raw ? (JSON.parse(raw) as PlannedDoses) : {};
+}
+
+export async function savePlanned(planned: PlannedDoses): Promise<void> {
+  await AsyncStorage.setItem(KEYS.planned, JSON.stringify(planned));
+}
+
 // ---- Settings --------------------------------------------------------------
 
 export async function getSettings(): Promise<Settings> {
@@ -69,5 +81,5 @@ export async function saveSettings(settings: Settings): Promise<void> {
 // ---- Danger zone -----------------------------------------------------------
 
 export async function clearAll(): Promise<void> {
-  await AsyncStorage.multiRemove([KEYS.child, KEYS.records, KEYS.settings]);
+  await AsyncStorage.multiRemove([KEYS.child, KEYS.records, KEYS.settings, KEYS.planned]);
 }
