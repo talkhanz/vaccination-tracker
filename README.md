@@ -83,6 +83,52 @@ notifications** (which don't work in the web preview).
 > Same-Wi-Fi requirement and the `npx expo start --tunnel` fallback apply here
 > too.
 
+#### How Expo Go loads the app (and using it without your computer)
+
+By default, `npm start` runs a **Metro dev server** on your computer. Expo Go on
+the phone downloads the app's JavaScript from that server **every time it
+launches**, so the app is tethered to your machine — it needs your computer on,
+the dev server running, and the phone reachable (same Wi-Fi, or `--tunnel`).
+That's ideal for development (save a file → it hot-reloads on the phone) but not
+for everyday use.
+
+To use it **without a running dev server**, publish the JS bundle to Expo's
+cloud once with **EAS Update**. Expo Go then downloads it from Expo's servers —
+no computer, no same-Wi-Fi requirement:
+
+```bash
+npx expo install expo-updates      # mechanism that fetches the hosted JS
+eas login                          # free Expo account
+eas update:configure               # link the project to EAS
+eas update --branch preview --message "v1"
+```
+
+The last command prints a **link + QR code**. Open it in Expo Go once; it runs
+from Expo's cloud and stays in Expo Go's "Recently opened" list so it reopens
+without re-scanning. Publish improvements later by re-running `eas update`. This
+works because every native module this app uses (date picker, notifications,
+local storage) is already built into the Expo Go runtime.
+
+**Limitations of the Expo Go route** (it's a preview tool, not a store app):
+
+- **No standalone icon** — the app lives *inside* Expo Go (open Expo Go, then the
+  project), with Expo Go branding around it.
+- **Cache can be cleared** — if Expo Go is deleted or its cache evicted, reopen
+  via the saved link/QR. Keep it handy.
+- **SDK coupling** — when Expo Go updates in the App/Play Store it targets newer
+  SDKs, so occasionally you'd bump this project's Expo SDK to stay compatible.
+- **Notifications** — local due-date reminders generally work in Expo Go, though
+  Expo increasingly steers notification features toward a development build; the
+  app fails safe if a reminder can't be scheduled.
+- **Local data** — records live in Expo Go's on-device sandbox, so keep a backup
+  if you rely on them (see notes on a future export/restore feature).
+
+For a true home-screen app (own icon, most reliable), the next step up is a
+**development build** or a store/**TestFlight** build — see
+[Installing it as a standalone app](#installing-it-as-a-standalone-app-optional)
+below. Building for iPhone reintroduces Apple signing, so Expo Go + EAS Update is
+the best **free** option for personal use.
+
 ### Option B — On a simulator / emulator (needs Apple/Google tooling)
 
 **iOS Simulator (macOS only)** — requires [Xcode](https://developer.apple.com/xcode/)
