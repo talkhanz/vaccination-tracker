@@ -14,11 +14,15 @@ Recommended Child & Adolescent Immunization Schedule (2025)**.
   card with a one-tap way to record the dose.
 - **Schedule** — browse every vaccine by series or along an age timeline, each
   dose tagged Done / Overdue / Due soon / Upcoming with its recommended date.
-- **Timeline** — a calendar-time view of every dose across the past and future:
-  administered doses at the date given, pending doses at their booked
-  appointment (or CDC-recommended date). A date scrubber lets you jump to any
-  past or future date and see an "as of then" snapshot (given / due / ahead),
-  and you can **book a planned appointment date** on any pending dose.
+- **Timeline** — two toggleable views of every dose across time:
+  - **Timeline (list)** — a vertical calendar of the past and future:
+    administered doses at the date given, pending doses at their booked
+    appointment (or CDC-recommended date). A date scrubber jumps to any past or
+    future date with an "as of then" snapshot (given / due / ahead).
+  - **Chart (grid)** — vaccines down the side, age across the top (like the CDC
+    schedule chart), with a frozen vaccine column, a highlighted "Now" band at
+    the child's current age, and color-coded status dots.
+  From either view you can **book a planned appointment date** on a pending dose.
 - **Vaccine detail** — what each vaccine protects against, CDC series notes,
   per-dose timing, and a link out to the relevant CDC.gov page.
 - **History** — a running log of every recorded dose (date, provider, lot #,

@@ -10,6 +10,7 @@ import { RootStackParamList, TabParamList } from '../navigation/types';
 import { colors, radius, spacing, typography } from '../theme/theme';
 import { Card, STATUS_META } from '../components/ui';
 import { DateField } from '../components/DateField';
+import { TimelineChart } from '../components/TimelineChart';
 import {
   buildTimeline,
   summarizeAsOf,
@@ -27,9 +28,12 @@ type Row =
   | { kind: 'marker'; key: string; variant: 'today' | 'selected'; label: string }
   | { kind: 'entry'; key: string; entry: TimelineEntry };
 
+type Mode = 'list' | 'chart';
+
 export function TimelineScreen({ navigation }: Props) {
   const { child, schedule } = useApp();
   const [selected, setSelected] = useState(toISODate(today()));
+  const [mode, setMode] = useState<Mode>('list');
 
   const flatEntries = useMemo(
     () => buildTimeline(schedule).flatMap((m) => m.entries),
@@ -87,9 +91,38 @@ export function TimelineScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
         <Text style={styles.title}>Timeline</Text>
+        <View style={styles.toggle}>
+          {(['list', 'chart'] as Mode[]).map((m) => (
+            <Pressable
+              key={m}
+              onPress={() => setMode(m)}
+              style={[styles.toggleItem, mode === m && styles.toggleItemActive]}
+            >
+              <Ionicons
+                name={m === 'list' ? 'list' : 'grid'}
+                size={15}
+                color={mode === m ? colors.primary : colors.textMuted}
+              />
+              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
+                {m === 'list' ? 'Timeline' : 'Chart'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
 
+      {mode === 'chart' ? (
+        <View style={styles.chartWrap}>
+          <TimelineChart
+            schedule={schedule}
+            birthDate={child.birthDate}
+            onSelectVaccine={(id) => navigation.navigate('VaccineDetail', { vaccineId: id })}
+          />
+        </View>
+      ) : (
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Date scrubber + as-of summary */}
         <Card style={styles.scrubCard}>
           <View style={styles.scrubHead}>
@@ -157,6 +190,7 @@ export function TimelineScreen({ navigation }: Props) {
           appointment, or their CDC-recommended date if none is booked yet.
         </Text>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -263,7 +297,34 @@ const RAIL_W = 40;
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  title: { ...typography.h1, marginBottom: spacing.lg },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  title: { ...typography.h1, marginBottom: spacing.md },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.primaryTint,
+    borderRadius: radius.pill,
+    padding: 3,
+  },
+  toggleItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+  },
+  toggleItemActive: {
+    backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  toggleText: { ...typography.small, fontWeight: '700', color: colors.textMuted },
+  toggleTextActive: { color: colors.primary },
+  chartWrap: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
 
   scrubCard: { marginBottom: spacing.xl },
   scrubHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
