@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "vaccinator",
+    "name": "Vaccinator",
     "slug": "vaccinator",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "primaryColor": "#0E7C86",
     "ios": {
       "supportsTablet": true
     },
@@ -20,6 +21,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#0E7C86"
+        }
+      ]
+    ]
   }
 }

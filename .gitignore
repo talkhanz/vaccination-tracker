@@ -32,6 +32,7 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env                    # ADDED: never commit secrets/API keys, even the base .env
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +40,19 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# ---- Additions ----
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# OS junk
+Thumbs.db
+
+# Test / coverage output (if you add tests later)
+coverage/
+
+# Claude Code local overrides (keep shared config, ignore machine-local)
+.claude/settings.local.json
