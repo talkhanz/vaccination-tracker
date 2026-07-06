@@ -39,22 +39,103 @@ Recommended Child & Adolescent Immunization Schedule (2025)**.
 
 ## Running the app
 
-Requires [Node.js](https://nodejs.org) and the Expo tooling (via `npx`).
+Requires [Node.js](https://nodejs.org) 20+ and the Expo tooling (installed
+automatically via `npx`). First, install dependencies once:
 
 ```bash
 npm install
-
-# On your phone: install "Expo Go", then run and scan the QR code
-npm start
-
-# Or target a platform directly
-npm run ios       # iOS simulator (needs Xcode)
-npm run android   # Android emulator (needs Android Studio)
-npm run web       # open in a browser
 ```
 
-> Note: local notification reminders require running on a real device (or a
-> development build), not the web preview.
+### Option A — On your own phone with Expo Go (easiest, no Xcode/Android Studio)
+
+This runs the app on a real iPhone or Android phone in minutes. It's the
+recommended way to try it, and the only way to test the **reminder
+notifications** (which don't work in the web preview).
+
+**iOS (iPhone / iPad)**
+1. Install **Expo Go** from the App Store:
+   https://apps.apple.com/app/expo-go/id982107779
+2. On your Mac/PC, from the project folder run:
+   ```bash
+   npm start
+   ```
+   A QR code appears in the terminal.
+3. Open the **Camera** app on your iPhone and point it at the QR code, then tap
+   the "Open in Expo Go" banner.
+4. The app loads in Expo Go. When prompted, **Allow Notifications** so due-date
+   reminders can work.
+
+> Your computer and iPhone must be on the **same Wi-Fi network**. If it won't
+> connect (common on public/corporate Wi-Fi), run `npx expo start --tunnel`
+> instead and scan that QR code.
+
+**Android**
+1. Install **Expo Go** from the Play Store:
+   https://play.google.com/store/apps/details?id=host.exp.exponent
+2. From the project folder run:
+   ```bash
+   npm start
+   ```
+3. Open **Expo Go** on your phone → **Scan QR code** → scan the QR in the
+   terminal.
+4. The app loads. **Allow Notifications** when prompted for reminders.
+
+> Same-Wi-Fi requirement and the `npx expo start --tunnel` fallback apply here
+> too.
+
+### Option B — On a simulator / emulator (needs Apple/Google tooling)
+
+**iOS Simulator (macOS only)** — requires [Xcode](https://developer.apple.com/xcode/)
+from the Mac App Store:
+```bash
+npm run ios
+```
+This builds and opens the app in the iOS Simulator automatically.
+
+**Android Emulator** — requires [Android Studio](https://developer.android.com/studio)
+with an Android Virtual Device (AVD) created and running:
+```bash
+npm run android
+```
+
+### Option C — In a web browser (quick look, limited)
+
+```bash
+npm run web
+```
+Good for a fast preview of the UI, but the native date picker and notification
+reminders are unavailable in the browser.
+
+### Everyday commands
+
+| Command | What it does |
+| --- | --- |
+| `npm start` | Start the dev server + QR code (use with Expo Go) |
+| `npm run ios` | Open in the iOS Simulator (macOS + Xcode) |
+| `npm run android` | Open in the Android Emulator (Android Studio) |
+| `npm run web` | Open in a browser |
+
+While the dev server is running, press `r` to reload, or just save a file and it
+hot-reloads on the device.
+
+### Installing it as a standalone app (optional)
+
+Expo Go is perfect for personal use. To produce an installable build (an `.ipa`
+for iOS or `.apk`/`.aab` for Android) — e.g. to keep it on your phone without
+Expo Go, or to share it — use [EAS Build](https://docs.expo.dev/build/setup/):
+
+```bash
+npm install -g eas-cli
+eas login
+eas build --profile preview --platform android   # or: --platform ios
+```
+
+> Note: iOS builds/installs require an Apple Developer account; Android `.apk`
+> builds can be installed directly on a device.
+
+> **Reminder about notifications:** local due-date reminders require running on a
+> real device (Expo Go or a build), not the web preview or a fresh simulator
+> without notification permissions.
 
 ## How it's built
 
