@@ -11,6 +11,16 @@ import { colors, radius, spacing, typography } from '../theme/theme';
 import { Card } from '../components/ui';
 import { formatAge, formatDate, parseISO } from '../logic/dates';
 import { cancelAllReminders, requestPermission, rescheduleReminders } from '../logic/notifications';
+import { exportBackup, pickBackup } from '../logic/backup';
+
+/** Cross-platform alert: native uses Alert, web uses window.alert. */
+function notify(title: string, message?: string) {
+  if (Platform.OS === 'web') {
+    (globalThis as any).alert(message ? `${title}\n\n${message}` : title);
+  } else {
+    Alert.alert(title, message);
+  }
+}
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Settings'>,
@@ -53,8 +63,55 @@ function Row({
 }
 
 export function SettingsScreen({ navigation }: Props) {
-  const { child, settings, saveSettings, schedule, resetEverything } = useApp();
+  const {
+    child,
+    records,
+    plannedDates,
+    settings,
+    saveSettings,
+    schedule,
+    restoreFromBackup,
+    resetEverything,
+  } = useApp();
   if (!child) return null;
+
+  const handleExport = async () => {
+    try {
+      const result = await exportBackup({ child, records, plannedDates, settings });
+      if (result === 'unavailable') {
+        notify('Sharing unavailable', 'Saving files is not available on this device.');
+      } else if (result === 'downloaded') {
+        notify('Backup downloaded', 'Your backup file has been saved.');
+      }
+      // On native, the share sheet appearing is confirmation enough.
+    } catch {
+      notify('Export failed', 'Something went wrong creating the backup. Please try again.');
+    }
+  };
+
+  const doImport = async () => {
+    try {
+      const data = await pickBackup();
+      if (!data) return; // cancelled
+      await restoreFromBackup(data);
+      notify('Restore complete', `Loaded ${data.records.length} dose record${data.records.length === 1 ? '' : 's'}.`);
+    } catch (e: any) {
+      notify('Could not restore', e?.message ?? 'The file could not be read.');
+    }
+  };
+
+  const handleImport = () => {
+    const warning =
+      'Restoring will replace the current profile and all records on this device with the backup. Continue?';
+    if (Platform.OS === 'web') {
+      if ((globalThis as any).confirm(warning)) doImport();
+    } else {
+      Alert.alert('Restore from backup?', warning, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Restore', style: 'destructive', onPress: doImport },
+      ]);
+    }
+  };
 
   const toggleReminders = async (value: boolean) => {
     if (value) {
@@ -153,6 +210,28 @@ export function SettingsScreen({ navigation }: Props) {
           />
         </Card>
 
+        <Text style={styles.groupLabel}>Backup &amp; restore</Text>
+        <Card style={styles.card}>
+          <Row
+            icon="cloud-upload-outline"
+            title="Export a backup"
+            subtitle="Save all records to a file you control"
+            onPress={handleExport}
+          />
+          <View style={styles.sep} />
+          <Row
+            icon="cloud-download-outline"
+            title="Restore from a backup"
+            subtitle="Replace this device's data with a backup file"
+            onPress={handleImport}
+          />
+        </Card>
+        <Text style={styles.helpNote}>
+          Your data lives only on this device. Export a backup regularly and keep
+          it somewhere safe (Files, iCloud/Drive, email) so records survive
+          reinstalling the app or switching phones.
+        </Text>
+
         <Text style={styles.groupLabel}>Data</Text>
         <Card style={styles.card}>
           <Row
@@ -192,5 +271,6 @@ const styles = StyleSheet.create({
   rowTitle: { ...typography.bodyStrong },
   rowSub: { ...typography.small, marginTop: 2 },
   sep: { height: 1, backgroundColor: colors.border, marginLeft: 48 },
+  helpNote: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm, marginHorizontal: 4, lineHeight: 18 },
   disclaimer: { ...typography.small, color: colors.textFaint, marginTop: spacing.xl, lineHeight: 18, textAlign: 'center' },
 });

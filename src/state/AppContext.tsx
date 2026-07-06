@@ -18,12 +18,14 @@ import {
   getPlanned,
   getRecords,
   getSettings,
+  restoreAll as restoreAllStorage,
   savePlanned as savePlannedStorage,
   saveChild as saveChildStorage,
   saveSettings as saveSettingsStorage,
   upsertRecord as upsertRecordStorage,
 } from '../storage/store';
 import { doseKey } from '../logic/scheduling';
+import { BackupData } from '../logic/backup';
 import {
   computeSchedule,
   DoseSchedule,
@@ -48,6 +50,8 @@ interface AppState {
   saveSettings: (settings: Settings) => Promise<void>;
   /** Book (iso) or clear (null) a planned appointment date for a pending dose. */
   setPlannedDate: (vaccineId: string, doseNumber: number, iso: string | null) => Promise<void>;
+  /** Replace all data from an imported backup. */
+  restoreFromBackup: (data: BackupData) => Promise<void>;
   resetEverything: () => Promise<void>;
 }
 
@@ -110,6 +114,14 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     []
   );
 
+  const restoreFromBackup = useCallback(async (data: BackupData) => {
+    await restoreAllStorage(data);
+    setChild(data.child);
+    setRecords(data.records);
+    setPlannedDates(data.plannedDates);
+    setSettings(data.settings);
+  }, []);
+
   const resetEverything = useCallback(async () => {
     await clearAllStorage();
     setChild(null);
@@ -149,6 +161,7 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     deleteRecord,
     saveSettings,
     setPlannedDate,
+    restoreFromBackup,
     resetEverything,
   };
 

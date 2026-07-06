@@ -34,6 +34,9 @@ Recommended Child & Adolescent Immunization Schedule (2025)**.
   before each dose is due (mobile only).
 - **Manage vaccines** — pick which vaccines apply (e.g. choose your rotavirus
   product, enable MenB) so progress and reminders stay accurate.
+- **Backup & restore** — export all records to a single JSON file you control
+  (save to Files, iCloud/Drive, email…) and re-import it later, so your data
+  survives reinstalling the app or moving to a new phone.
 - **Private by design** — all data is stored only on the device via
   AsyncStorage. No account, no server, no network calls for your data.
 
@@ -177,8 +180,10 @@ Expo Go can no longer run it and you'd need a development build instead.
 - **Notifications** — local due-date reminders generally work in Expo Go, though
   Expo increasingly steers notification features toward a development build; the
   app fails safe if a reminder can't be scheduled.
-- **Local data** — records live in Expo Go's on-device sandbox, so keep a backup
-  if you rely on them (see notes on a future export/restore feature).
+- **Local data** — records live in Expo Go's on-device sandbox, so use
+  **Settings → Backup & restore** to export a file periodically (see
+  [Backing up your data](#backing-up-your-data)); you can re-import it if the
+  cache is cleared or you switch phones.
 
 For a true home-screen app (own icon, most reliable), the next step up is a
 **development build** or a store/**TestFlight** build — see
@@ -240,6 +245,33 @@ eas build --profile preview --platform android   # or: --platform ios
 > real device (Expo Go or a build), not the web preview or a fresh simulator
 > without notification permissions.
 
+## Backing up your data
+
+Because everything is stored **only on the device**, exporting a backup now and
+then is the way to keep your records safe.
+
+**Export a backup**
+1. Go to **Settings → Backup & restore → Export a backup**.
+2. On a phone, the share sheet opens — save the file to **Files / iCloud
+   Drive / Google Drive**, email it to yourself, or AirDrop it. In a browser it
+   downloads directly.
+3. The file is named `vaccinator-backup-YYYY-MM-DD.json` and contains the child
+   profile, every dose record, planned appointments, and settings.
+
+**Restore a backup** (e.g. on a new phone, or after clearing Expo Go)
+1. Get the backup file onto the device (save it into Files, or have it in an
+   email).
+2. Go to **Settings → Backup & restore → Restore from a backup** and pick the
+   file.
+3. Confirm — this **replaces** the current data on the device with the backup's
+   contents.
+
+The backup is plain JSON, so it's easy to inspect and future-proof. Invalid or
+unrelated files are rejected with a clear message, and a backup from a newer
+app version won't be imported by an older one.
+
+> Tip: export a fresh backup after each doctor visit where you record new doses.
+
 ## How it's built
 
 | Area | Choice |
@@ -248,6 +280,7 @@ eas build --profile preview --platform android   # or: --platform ios
 | Navigation | React Navigation (bottom tabs + native stack) |
 | Storage | `@react-native-async-storage/async-storage` (on-device only) |
 | Reminders | `expo-notifications` (local, opt-in) |
+| Backup | `expo-file-system` + `expo-sharing` + `expo-document-picker` (JSON export/import) |
 
 ### Project structure
 
@@ -262,6 +295,7 @@ src/
     dates.ts          # dependency-free date helpers
     validation.ts     # birth-date / dose-date validation
     notifications.ts  # local reminder scheduling (safe no-op on web)
+    backup.ts         # export/import all data as a JSON file (native + web)
   storage/store.ts    # AsyncStorage CRUD (child, records, planned dates, settings)
   state/AppContext.tsx# app-wide state + derived schedule
   components/          # Card, Button, DoseRow, DateField, ChildForm, ...

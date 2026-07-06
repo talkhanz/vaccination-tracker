@@ -83,3 +83,19 @@ export async function saveSettings(settings: Settings): Promise<void> {
 export async function clearAll(): Promise<void> {
   await AsyncStorage.multiRemove([KEYS.child, KEYS.records, KEYS.settings, KEYS.planned]);
 }
+
+/** Overwrite every stored value from an imported backup. */
+export async function restoreAll(data: {
+  child: Child | null;
+  records: DoseRecord[];
+  plannedDates: PlannedDoses;
+  settings: Settings;
+}): Promise<void> {
+  await AsyncStorage.multiSet([
+    [KEYS.records, JSON.stringify(data.records)],
+    [KEYS.planned, JSON.stringify(data.plannedDates)],
+    [KEYS.settings, JSON.stringify(data.settings)],
+  ]);
+  if (data.child) await AsyncStorage.setItem(KEYS.child, JSON.stringify(data.child));
+  else await AsyncStorage.removeItem(KEYS.child);
+}
