@@ -37,6 +37,15 @@ eas update --branch preview --message "ios test"
 > Plain `eas update` publishes for **all** platforms. Don't pass
 > `--platform android`, or the iOS bundle won't be included.
 
+> **"Select environment" prompt** — choose **`preview`** to match the `preview`
+> branch (`development` is for local dev; `production` is for a live release).
+> It only selects which EAS environment variables are used when bundling; this
+> app defines none, so the choice is about consistency. Skip the prompt next
+> time by adding the flag:
+> ```bash
+> eas update --branch preview --environment preview --message "ios test"
+> ```
+
 **Open it on the iPhone**
 
 1. Install **Expo Go** from the App Store.

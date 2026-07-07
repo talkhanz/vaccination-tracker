@@ -38,6 +38,12 @@
         "projectId": "083b2a61-c84a-438d-9bd7-74895c2124e3"
       }
     },
-    "owner": "talzkhanz"
+    "owner": "talzkhanz",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/083b2a61-c84a-438d-9bd7-74895c2124e3"
+    }
   }
 }
