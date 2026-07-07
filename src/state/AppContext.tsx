@@ -59,6 +59,8 @@ interface AppState {
   selectedChildId: string | null;
   selectChild: (id: string) => Promise<void>;
   addChild: (child: Child) => Promise<void>;
+  /** Add several children at once (used by first-time onboarding); selects the first. */
+  addChildren: (list: Child[]) => Promise<void>;
   saveChild: (child: Child) => Promise<void>;
   deleteChild: (id: string) => Promise<void>;
 
@@ -128,6 +130,17 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     });
     setSelectedChildId(next.id);
     await saveSelectedChildId(next.id);
+  }, []);
+
+  const addChildren = useCallback(async (list: Child[]) => {
+    if (list.length === 0) return;
+    setChildren((prev) => {
+      const next = [...prev, ...list];
+      saveChildren(next);
+      return next;
+    });
+    setSelectedChildId(list[0].id);
+    await saveSelectedChildId(list[0].id);
   }, []);
 
   const saveChild = useCallback(async (next: Child) => {
@@ -304,6 +317,7 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     selectedChildId,
     selectChild,
     addChild,
+    addChildren,
     saveChild,
     deleteChild,
     records,
