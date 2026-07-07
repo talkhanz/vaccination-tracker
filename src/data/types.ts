@@ -49,6 +49,8 @@ export interface Settings {
   remindersEnabled: boolean;
   /** How many days before a due date to send a reminder. */
   reminderLeadDays: number;
+  /** The TERMS_VERSION the parent has accepted; undefined until they accept. */
+  termsAcceptedVersion?: number;
   /**
    * Legacy single-child vaccine selection. Kept only so old data / backups can
    * migrate onto the child; no longer written. See Child.activeVaccineIds.

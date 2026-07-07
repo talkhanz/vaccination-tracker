@@ -43,6 +43,10 @@ Recommended Child & Adolescent Immunization Schedule (2025)**.
   survives reinstalling the app or moving to a new phone.
 - **Private by design** — all data is stored only on the device via
   AsyncStorage. No account, no server, no network calls for your data.
+- **Terms of Use gate** — on first launch parents must read and accept the Terms
+  of Use (informational-only, not medical advice, data responsibility, etc.)
+  before using the app. Re-accepting is required if the terms change. A
+  **Privacy Policy** is linked from the gate and from Settings.
 
 ## Running the app
 
@@ -293,6 +297,8 @@ src/
   data/
     schedule.ts       # CDC 2025 schedule as structured data (source of truth)
     vaccineMeta.ts    # which vaccines are active by default; variant groups
+    terms.ts          # Terms of Use content + version (acceptance gate)
+    privacy.ts        # Privacy Policy content + version
     types.ts          # Child, DoseRecord, PlannedDoses, Settings models
   logic/
     scheduling.ts     # the engine: status + due dates, timeline, as-of summary
@@ -303,9 +309,9 @@ src/
   storage/store.ts    # AsyncStorage CRUD (child, records, planned dates, settings)
   state/AppContext.tsx# app-wide state + derived schedule
   components/          # Card, Button, DoseRow, DateField, ChildForm, ...
-  screens/            # Dashboard, Schedule, Timeline, VaccineDetail, RecordDose,
-                      #   PlanDose, History, Settings, Children, EditChild,
-                      #   ManageVaccines, Onboarding
+  screens/            # Terms, Privacy, Dashboard, Schedule, Timeline,
+                      #   VaccineDetail, RecordDose, PlanDose, History, Settings,
+                      #   Children, EditChild, ManageVaccines, Onboarding
   navigation/         # tab + stack wiring
 theme/theme.ts        # colors, spacing, typography tokens
 ```
@@ -316,3 +322,17 @@ The schedule lives in [`src/data/schedule.ts`](src/data/schedule.ts) with its CD
 sources cited at the top of the file. When the CDC publishes a new yearly
 schedule, update the dose ages/notes there — the rest of the app derives
 everything from that data.
+
+## Legal
+
+- **License** — MIT. See [LICENSE.md](LICENSE.md) (update the copyright holder to
+  your name/organization).
+- **Terms of Use** — [`src/data/terms.ts`](src/data/terms.ts); shown as an
+  acceptance gate on first launch and viewable in Settings.
+- **Privacy Policy** — [`src/data/privacy.ts`](src/data/privacy.ts); linked from
+  the Terms gate and Settings.
+
+> The Terms and Privacy text are practical, plain-language templates — **not
+> legal advice**. Before publishing an app that handles children's health data,
+> have a qualified attorney review and adapt them (and consider COPPA/HIPAA and
+> app-store requirements).

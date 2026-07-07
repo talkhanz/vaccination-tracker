@@ -19,4 +19,6 @@ export type RootStackParamList = {
   // add: true creates a new child; otherwise edits the selected child.
   EditChild: { add?: boolean } | undefined;
   Children: undefined;
+  Terms: undefined;
+  Privacy: undefined;
 };

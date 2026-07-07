@@ -37,6 +37,7 @@ import {
   summarize,
 } from '../logic/scheduling';
 import { defaultActiveVaccineIds } from '../data/vaccineMeta';
+import { TERMS_VERSION } from '../data/terms';
 
 /** A child paired with their computed schedule (used for reminders). */
 export interface ChildSchedule {
@@ -46,6 +47,10 @@ export interface ChildSchedule {
 
 interface AppState {
   loading: boolean;
+
+  // Terms of Use gate
+  termsAccepted: boolean;
+  acceptTerms: () => Promise<void>;
 
   // Children
   children: Child[];
@@ -189,6 +194,16 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     setSettings(next);
   }, []);
 
+  const termsAccepted = settings.termsAcceptedVersion === TERMS_VERSION;
+
+  const acceptTerms = useCallback(async () => {
+    setSettings((prev) => {
+      const next = { ...prev, termsAcceptedVersion: TERMS_VERSION };
+      saveSettingsStorage(next);
+      return next;
+    });
+  }, []);
+
   const setPlannedDate = useCallback(
     async (vaccineId: string, doseNumber: number, iso: string | null) => {
       if (!selectedChildId) return;
@@ -275,6 +290,8 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
 
   const value: AppState = {
     loading,
+    termsAccepted,
+    acceptTerms,
     children,
     child,
     selectedChildId,

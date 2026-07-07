@@ -10,6 +10,8 @@ import { colors } from '../theme/theme';
 import { rescheduleReminders } from '../logic/notifications';
 
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { TermsGate, TermsScreen } from '../screens/TermsScreen';
+import { PrivacyScreen } from '../screens/PrivacyScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ScheduleScreen } from '../screens/ScheduleScreen';
 import { TimelineScreen } from '../screens/TimelineScreen';
@@ -72,7 +74,7 @@ function Tabs() {
 }
 
 export function RootNavigator() {
-  const { loading, child, settings, allSchedules } = useApp();
+  const { loading, termsAccepted, child, settings, allSchedules } = useApp();
 
   // Keep reminders in sync with every child's schedule when they're enabled.
   useEffect(() => {
@@ -94,7 +96,9 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navTheme}>
-      {!child ? (
+      {!termsAccepted ? (
+        <TermsGate />
+      ) : !child ? (
         <OnboardingScreen />
       ) : (
         <Stack.Navigator
@@ -128,6 +132,8 @@ export function RootNavigator() {
             component={ChildrenScreen}
             options={{ title: 'Children', presentation: 'modal' }}
           />
+          <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms of Use' }} />
+          <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy Policy' }} />
           <Stack.Screen
             name="ManageVaccines"
             component={ManageVaccinesScreen}

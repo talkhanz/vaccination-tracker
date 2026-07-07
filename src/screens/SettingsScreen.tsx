@@ -216,6 +216,20 @@ export function SettingsScreen({ navigation }: Props) {
           />
           <View style={styles.sep} />
           <Row
+            icon="document-text-outline"
+            title="Terms of Use"
+            subtitle="How to use Vaccinator responsibly"
+            onPress={() => navigation.navigate('Terms')}
+          />
+          <View style={styles.sep} />
+          <Row
+            icon="lock-closed-outline"
+            title="Privacy Policy"
+            subtitle="What we store and how it stays private"
+            onPress={() => navigation.navigate('Privacy')}
+          />
+          <View style={styles.sep} />
+          <Row
             icon="shield-checkmark-outline"
             title="Your data is private"
             subtitle="Everything is stored only on this device"
