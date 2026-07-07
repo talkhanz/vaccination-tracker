@@ -8,7 +8,7 @@ import { Card } from '../components/ui';
 import { colors, radius, spacing, typography } from '../theme/theme';
 
 export function OnboardingScreen() {
-  const { saveChild } = useApp();
+  const { addChild } = useApp();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -29,7 +29,7 @@ export function OnboardingScreen() {
           <Card style={{ marginTop: spacing.xl }}>
             <Text style={styles.cardTitle}>Let's set up your child's profile</Text>
             <View style={{ height: spacing.md }} />
-            <ChildForm submitLabel="Get started" onSubmit={saveChild} />
+            <ChildForm submitLabel="Get started" onSubmit={addChild} />
           </Card>
 
           <Text style={styles.disclaimer}>

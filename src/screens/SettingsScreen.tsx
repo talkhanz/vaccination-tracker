@@ -65,19 +65,21 @@ function Row({
 export function SettingsScreen({ navigation }: Props) {
   const {
     child,
-    records,
-    plannedDates,
+    children,
     settings,
     saveSettings,
-    schedule,
+    allSchedules,
+    buildBackupData,
     restoreFromBackup,
     resetEverything,
   } = useApp();
   if (!child) return null;
 
+  const reminderEntries = allSchedules.map((s) => ({ childName: s.child.name, schedule: s.schedule }));
+
   const handleExport = async () => {
     try {
-      const result = await exportBackup({ child, records, plannedDates, settings });
+      const result = await exportBackup(buildBackupData());
       if (result === 'unavailable') {
         notify('Sharing unavailable', 'Saving files is not available on this device.');
       } else if (result === 'downloaded') {
@@ -102,7 +104,7 @@ export function SettingsScreen({ navigation }: Props) {
 
   const handleImport = () => {
     const warning =
-      'Restoring will replace the current profile and all records on this device with the backup. Continue?';
+      'Restoring will replace every child and all records on this device with the backup. Continue?';
     if (Platform.OS === 'web') {
       if ((globalThis as any).confirm(warning)) doImport();
     } else {
@@ -123,7 +125,7 @@ export function SettingsScreen({ navigation }: Props) {
         );
       }
       await saveSettings({ ...settings, remindersEnabled: true });
-      await rescheduleReminders(child.name, schedule, settings.reminderLeadDays);
+      await rescheduleReminders(reminderEntries, settings.reminderLeadDays);
     } else {
       await saveSettings({ ...settings, remindersEnabled: false });
       await cancelAllReminders();
@@ -140,7 +142,7 @@ export function SettingsScreen({ navigation }: Props) {
     } else {
       Alert.alert(
         'Delete all data?',
-        'This permanently removes the profile and all recorded doses on this device. This cannot be undone.',
+        'This permanently removes every child and all recorded doses on this device. This cannot be undone.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Delete', style: 'destructive', onPress: doReset },
@@ -154,11 +156,21 @@ export function SettingsScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Settings</Text>
 
-        <Text style={styles.groupLabel}>Profile</Text>
+        <Text style={styles.groupLabel}>Children</Text>
+        <Card style={styles.card}>
+          <Row
+            icon="people-outline"
+            title="Manage children"
+            subtitle={`${children.length} ${children.length === 1 ? 'child' : 'children'} · switch or add`}
+            onPress={() => navigation.navigate('Children')}
+          />
+        </Card>
+
+        <Text style={styles.groupLabel}>{child.name}</Text>
         <Card style={styles.card}>
           <Row
             icon="person-circle-outline"
-            title={child.name}
+            title="Profile"
             subtitle={`Born ${formatDate(parseISO(child.birthDate))} · ${formatAge(parseISO(child.birthDate))}`}
             onPress={() => navigation.navigate('EditChild')}
           />
@@ -166,7 +178,7 @@ export function SettingsScreen({ navigation }: Props) {
           <Row
             icon="medkit-outline"
             title="Vaccines tracked"
-            subtitle="Choose which vaccines apply to your child"
+            subtitle={`Choose which vaccines apply to ${child.name}`}
             onPress={() => navigation.navigate('ManageVaccines')}
           />
         </Card>

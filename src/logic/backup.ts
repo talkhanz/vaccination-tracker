@@ -8,29 +8,24 @@ import { Platform } from 'react-native';
 import {
   Child,
   DoseRecord,
+  PlannedByChild,
   PlannedDoses,
   Settings,
   DEFAULT_SETTINGS,
 } from '../data/types';
+import { AppData } from '../storage/store';
 import { toISODate } from './dates';
 
-export const BACKUP_SCHEMA = 1;
+/** Bumped to 2 for multi-child support; schema-1 (single child) still imports. */
+export const BACKUP_SCHEMA = 2;
 
-/** The exact payload written to / read from a backup file. */
-export interface BackupData {
-  child: Child | null;
-  records: DoseRecord[];
-  plannedDates: PlannedDoses;
-  settings: Settings;
-}
-
-interface BackupFile extends BackupData {
+interface BackupFile extends AppData {
   app: 'vaccinator';
   schema: number;
   exportedAt: string;
 }
 
-function buildBackup(data: BackupData): BackupFile {
+function buildBackup(data: AppData): BackupFile {
   return {
     app: 'vaccinator',
     schema: BACKUP_SCHEMA,
@@ -42,7 +37,7 @@ function buildBackup(data: BackupData): BackupFile {
 export type ExportResult = 'shared' | 'downloaded' | 'unavailable';
 
 /** Write a backup file and hand it to the share sheet (native) or download it (web). */
-export async function exportBackup(data: BackupData): Promise<ExportResult> {
+export async function exportBackup(data: AppData): Promise<ExportResult> {
   const json = JSON.stringify(buildBackup(data), null, 2);
   const filename = `vaccinator-backup-${toISODate(new Date())}.json`;
 
@@ -75,34 +70,72 @@ export async function exportBackup(data: BackupData): Promise<ExportResult> {
   return 'unavailable';
 }
 
-/** Validate untrusted JSON into a BackupData, throwing friendly errors. */
-export function validateBackup(raw: unknown): BackupData {
+function mergeSettings(raw: unknown): Settings {
+  return raw && typeof raw === 'object'
+    ? { ...DEFAULT_SETTINGS, ...(raw as Settings) }
+    : DEFAULT_SETTINGS;
+}
+
+/** Convert an old single-child (schema 1) backup into the multi-child shape. */
+function migrateSchema1(o: Record<string, unknown>): AppData {
+  const settings = mergeSettings(o.settings);
+  const child = o.child && typeof o.child === 'object' ? ({ ...(o.child as Child) }) : null;
+  const legacyActive = (o.settings as any)?.activeVaccineIds;
+  if (child && legacyActive && !child.activeVaccineIds) child.activeVaccineIds = legacyActive;
+
+  if (!child) {
+    return { children: [], selectedChildId: null, records: [], plannedByChild: {}, settings };
+  }
+  const rawRecords = Array.isArray(o.records) ? (o.records as DoseRecord[]) : [];
+  const records = rawRecords.map((r) => ({ ...r, childId: r.childId ?? child.id }));
+  const plannedByChild: PlannedByChild = {
+    [child.id]: (o.plannedDates && typeof o.plannedDates === 'object'
+      ? (o.plannedDates as PlannedDoses)
+      : {}),
+  };
+  return {
+    children: [child],
+    selectedChildId: child.id,
+    records,
+    plannedByChild,
+    settings: { remindersEnabled: settings.remindersEnabled, reminderLeadDays: settings.reminderLeadDays },
+  };
+}
+
+/** Validate untrusted JSON into AppData, throwing friendly errors. */
+export function validateBackup(raw: unknown): AppData {
   if (!raw || typeof raw !== 'object') throw new Error('This file is not a valid backup.');
   const o = raw as Record<string, unknown>;
   if (o.app !== 'vaccinator') throw new Error("This doesn't look like a Vaccinator backup file.");
-  if (typeof o.schema !== 'number' || o.schema > BACKUP_SCHEMA) {
+
+  const schema = typeof o.schema === 'number' ? o.schema : 1;
+  if (schema > BACKUP_SCHEMA) {
     throw new Error('This backup was made by a newer version of the app. Please update first.');
   }
+  if (schema <= 1) return migrateSchema1(o);
+
+  // Schema 2 (multi-child).
+  if (!Array.isArray(o.children)) throw new Error('This backup is missing its children.');
   if (!Array.isArray(o.records)) throw new Error('This backup is missing its dose records.');
-
-  const child = o.child && typeof o.child === 'object' ? (o.child as Child) : null;
-  const plannedDates =
-    o.plannedDates && typeof o.plannedDates === 'object'
-      ? (o.plannedDates as PlannedDoses)
+  const children = o.children as Child[];
+  const records = o.records as DoseRecord[];
+  const plannedByChild =
+    o.plannedByChild && typeof o.plannedByChild === 'object'
+      ? (o.plannedByChild as PlannedByChild)
       : {};
-  const settings =
-    o.settings && typeof o.settings === 'object'
-      ? ({ ...DEFAULT_SETTINGS, ...(o.settings as Settings) })
-      : DEFAULT_SETTINGS;
-
-  return { child, records: o.records as DoseRecord[], plannedDates, settings };
+  let selectedChildId =
+    typeof o.selectedChildId === 'string' ? (o.selectedChildId as string) : null;
+  if (!selectedChildId || !children.some((c) => c.id === selectedChildId)) {
+    selectedChildId = children[0]?.id ?? null;
+  }
+  return { children, selectedChildId, records, plannedByChild, settings: mergeSettings(o.settings) };
 }
 
 /**
  * Let the parent pick a backup file and return its validated contents.
  * Returns null if they cancel; throws with a friendly message if the file is bad.
  */
-export async function pickBackup(): Promise<BackupData | null> {
+export async function pickBackup(): Promise<AppData | null> {
   const DocumentPicker = require('expo-document-picker');
   const res = await DocumentPicker.getDocumentAsync({
     type: 'application/json',

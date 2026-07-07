@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -18,7 +18,7 @@ type Props = CompositeScreenProps<
 >;
 
 export function DashboardScreen({ navigation }: Props) {
-  const { child, schedule, summary } = useApp();
+  const { child, children, schedule, summary } = useApp();
   if (!child || !summary) return null;
 
   const attention = schedule
@@ -41,8 +41,12 @@ export function DashboardScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Header — tap to switch or add children */}
+        <Pressable
+          style={styles.header}
+          onPress={() => navigation.navigate('Children')}
+          accessibilityRole="button"
+        >
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initial}</Text>
           </View>
@@ -51,7 +55,15 @@ export function DashboardScreen({ navigation }: Props) {
             <Text style={styles.childName}>{child.name}</Text>
             <Text style={styles.childAge}>{formatAge(parseISO(child.birthDate))}</Text>
           </View>
-        </View>
+          <View style={styles.switcher}>
+            <Ionicons
+              name={children.length > 1 ? 'swap-horizontal' : 'add'}
+              size={18}
+              color={colors.primary}
+            />
+            {children.length > 1 ? <Text style={styles.switcherCount}>{children.length}</Text> : null}
+          </View>
+        </Pressable>
 
         {/* Progress */}
         <Card>
@@ -199,6 +211,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { color: colors.white, fontSize: 24, fontWeight: '700' },
+  switcher: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primaryTint, borderRadius: radius.pill,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
+  switcherCount: { ...typography.small, color: colors.primaryDark, fontWeight: '800' },
   hello: { ...typography.small },
   childName: { ...typography.h2 },
   childAge: { ...typography.small, color: colors.primary, fontWeight: '600' },

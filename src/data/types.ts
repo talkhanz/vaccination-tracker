@@ -9,6 +9,12 @@ export interface Child {
   birthDate: string;
   /** Optional — some vaccines have sex-specific notes, but not required. */
   sex?: 'female' | 'male' | 'unspecified';
+  /**
+   * Which vaccines are tracked for this child. Undefined means "use the default
+   * set" (resolved from vaccineMeta). Per-child because e.g. rotavirus product
+   * or MenB choices differ between siblings.
+   */
+  activeVaccineIds?: string[];
 }
 
 /**
@@ -18,9 +24,14 @@ export interface Child {
  */
 export type PlannedDoses = Record<string, string>;
 
+/** Planned appointment dates for every child, keyed by child id. */
+export type PlannedByChild = Record<string, PlannedDoses>;
+
 /** A single administered dose recorded by the parent. */
 export interface DoseRecord {
   id: string;
+  /** Which child this dose belongs to. */
+  childId: string;
   vaccineId: string;
   /** Which dose in the series this record satisfies (1-based). */
   doseNumber: number;
@@ -31,14 +42,14 @@ export interface DoseRecord {
   notes?: string;
 }
 
-/** Whether the parent wants reminder notifications, and how far ahead. */
+/** App-wide preferences (not specific to one child). */
 export interface Settings {
   remindersEnabled: boolean;
   /** How many days before a due date to send a reminder. */
   reminderLeadDays: number;
   /**
-   * Which vaccines are tracked for this child. Undefined means "use the
-   * default set" (resolved from vaccineMeta) so existing data upgrades cleanly.
+   * Legacy single-child vaccine selection. Kept only so old data / backups can
+   * migrate onto the child; no longer written. See Child.activeVaccineIds.
    */
   activeVaccineIds?: string[];
 }

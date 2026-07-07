@@ -1,6 +1,6 @@
-// App-wide state. Loads persisted data once, exposes it plus the computed
-// schedule to every screen, and funnels all mutations through one place so the
-// UI and storage never drift apart.
+// App-wide state. Loads persisted data once, tracks the list of children and
+// which one is selected, and exposes the selected child's derived schedule to
+// every screen. All mutations funnel through here so UI and storage never drift.
 
 import React, {
   createContext,
@@ -10,48 +10,73 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { Child, DoseRecord, PlannedDoses, Settings, DEFAULT_SETTINGS } from '../data/types';
 import {
+  Child,
+  DoseRecord,
+  PlannedByChild,
+  PlannedDoses,
+  Settings,
+  DEFAULT_SETTINGS,
+} from '../data/types';
+import {
+  AppData,
   clearAll as clearAllStorage,
-  deleteRecord as deleteRecordStorage,
-  getChild,
-  getPlanned,
-  getRecords,
-  getSettings,
+  loadAppData,
   restoreAll as restoreAllStorage,
-  savePlanned as savePlannedStorage,
-  saveChild as saveChildStorage,
+  savePlannedByChild,
+  saveChildren,
+  saveRecords,
+  saveSelectedChildId,
   saveSettings as saveSettingsStorage,
-  upsertRecord as upsertRecordStorage,
 } from '../storage/store';
-import { doseKey } from '../logic/scheduling';
-import { BackupData } from '../logic/backup';
 import {
   computeSchedule,
+  doseKey,
   DoseSchedule,
   ScheduleSummary,
   summarize,
 } from '../logic/scheduling';
 import { defaultActiveVaccineIds } from '../data/vaccineMeta';
 
+/** A child paired with their computed schedule (used for reminders). */
+export interface ChildSchedule {
+  child: Child;
+  schedule: DoseSchedule[];
+}
+
 interface AppState {
   loading: boolean;
-  child: Child | null;
+
+  // Children
+  children: Child[];
+  child: Child | null; // the currently selected child
+  selectedChildId: string | null;
+  selectChild: (id: string) => Promise<void>;
+  addChild: (child: Child) => Promise<void>;
+  saveChild: (child: Child) => Promise<void>;
+  deleteChild: (id: string) => Promise<void>;
+
+  // Selected child's derived data
   records: DoseRecord[];
-  settings: Settings;
   schedule: DoseSchedule[];
   summary: ScheduleSummary | null;
   activeVaccineIds: string[];
   plannedDates: PlannedDoses;
 
-  saveChild: (child: Child) => Promise<void>;
+  // Every child's schedule, for cross-child reminders
+  allSchedules: ChildSchedule[];
+
+  settings: Settings;
+
   upsertRecord: (record: DoseRecord) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   saveSettings: (settings: Settings) => Promise<void>;
-  /** Book (iso) or clear (null) a planned appointment date for a pending dose. */
+  /** Book (iso) or clear (null) a planned appointment date for the selected child. */
   setPlannedDate: (vaccineId: string, doseNumber: number, iso: string | null) => Promise<void>;
+  /** Snapshot of all data (every child) for exporting a backup. */
+  buildBackupData: () => AppData;
   /** Replace all data from an imported backup. */
-  restoreFromBackup: (data: BackupData) => Promise<void>;
+  restoreFromBackup: (data: AppData) => Promise<void>;
   resetEverything: () => Promise<void>;
 }
 
@@ -59,40 +84,104 @@ const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children: node }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
-  const [child, setChild] = useState<Child | null>(null);
-  const [records, setRecords] = useState<DoseRecord[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [allRecords, setAllRecords] = useState<DoseRecord[]>([]);
+  const [plannedByChild, setPlannedByChild] = useState<PlannedByChild>({});
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [plannedDates, setPlannedDates] = useState<PlannedDoses>({});
 
   useEffect(() => {
     (async () => {
-      const [c, r, s, p] = await Promise.all([
-        getChild(),
-        getRecords(),
-        getSettings(),
-        getPlanned(),
-      ]);
-      setChild(c);
-      setRecords(r);
-      setSettings(s);
-      setPlannedDates(p);
+      const data = await loadAppData();
+      setChildren(data.children);
+      setSelectedChildId(data.selectedChildId);
+      setAllRecords(data.records);
+      setPlannedByChild(data.plannedByChild);
+      setSettings(data.settings);
       setLoading(false);
     })();
   }, []);
 
-  const saveChild = useCallback(async (next: Child) => {
-    await saveChildStorage(next);
-    setChild(next);
+  const child = useMemo(
+    () => children.find((c) => c.id === selectedChildId) ?? null,
+    [children, selectedChildId]
+  );
+
+  // ---- Children mutations --------------------------------------------------
+
+  const selectChild = useCallback(async (id: string) => {
+    setSelectedChildId(id);
+    await saveSelectedChildId(id);
   }, []);
 
-  const upsertRecord = useCallback(async (record: DoseRecord) => {
-    const next = await upsertRecordStorage(record);
-    setRecords(next);
+  const addChild = useCallback(async (next: Child) => {
+    setChildren((prev) => {
+      const list = [...prev, next];
+      saveChildren(list);
+      return list;
+    });
+    setSelectedChildId(next.id);
+    await saveSelectedChildId(next.id);
   }, []);
+
+  const saveChild = useCallback(async (next: Child) => {
+    setChildren((prev) => {
+      const idx = prev.findIndex((c) => c.id === next.id);
+      const list = idx >= 0 ? prev.map((c) => (c.id === next.id ? next : c)) : [...prev, next];
+      saveChildren(list);
+      return list;
+    });
+  }, []);
+
+  const deleteChild = useCallback(
+    async (id: string) => {
+      const remainingChildren = children.filter((c) => c.id !== id);
+      const remainingRecords = allRecords.filter((r) => r.childId !== id);
+      const nextPlanned = { ...plannedByChild };
+      delete nextPlanned[id];
+      const nextSelected =
+        selectedChildId === id ? remainingChildren[0]?.id ?? null : selectedChildId;
+
+      setChildren(remainingChildren);
+      setAllRecords(remainingRecords);
+      setPlannedByChild(nextPlanned);
+      setSelectedChildId(nextSelected);
+
+      await Promise.all([
+        saveChildren(remainingChildren),
+        saveRecords(remainingRecords),
+        savePlannedByChild(nextPlanned),
+        saveSelectedChildId(nextSelected),
+      ]);
+    },
+    [children, allRecords, plannedByChild, selectedChildId]
+  );
+
+  // ---- Records / planned / settings ---------------------------------------
+
+  const upsertRecord = useCallback(
+    async (record: DoseRecord) => {
+      // Ensure the record is attached to the selected child.
+      const withChild: DoseRecord = {
+        ...record,
+        childId: record.childId || selectedChildId || '',
+      };
+      setAllRecords((prev) => {
+        const idx = prev.findIndex((r) => r.id === withChild.id);
+        const list = idx >= 0 ? prev.map((r) => (r.id === withChild.id ? withChild : r)) : [...prev, withChild];
+        saveRecords(list);
+        return list;
+      });
+    },
+    [selectedChildId]
+  );
 
   const deleteRecord = useCallback(async (id: string) => {
-    const next = await deleteRecordStorage(id);
-    setRecords(next);
+    setAllRecords((prev) => {
+      const list = prev.filter((r) => r.id !== id);
+      saveRecords(list);
+      return list;
+    });
   }, []);
 
   const saveSettings = useCallback(async (next: Settings) => {
@@ -102,65 +191,109 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
 
   const setPlannedDate = useCallback(
     async (vaccineId: string, doseNumber: number, iso: string | null) => {
-      setPlannedDates((prev) => {
-        const next = { ...prev };
+      if (!selectedChildId) return;
+      setPlannedByChild((prev) => {
+        const forChild = { ...(prev[selectedChildId] ?? {}) };
         const k = doseKey(vaccineId, doseNumber);
-        if (iso) next[k] = iso;
-        else delete next[k];
-        savePlannedStorage(next);
+        if (iso) forChild[k] = iso;
+        else delete forChild[k];
+        const next = { ...prev, [selectedChildId]: forChild };
+        savePlannedByChild(next);
         return next;
       });
     },
-    []
+    [selectedChildId]
   );
 
-  const restoreFromBackup = useCallback(async (data: BackupData) => {
+  const buildBackupData = useCallback(
+    (): AppData => ({
+      children,
+      selectedChildId,
+      records: allRecords,
+      plannedByChild,
+      settings,
+    }),
+    [children, selectedChildId, allRecords, plannedByChild, settings]
+  );
+
+  const restoreFromBackup = useCallback(async (data: AppData) => {
     await restoreAllStorage(data);
-    setChild(data.child);
-    setRecords(data.records);
-    setPlannedDates(data.plannedDates);
+    setChildren(data.children);
+    setSelectedChildId(data.selectedChildId);
+    setAllRecords(data.records);
+    setPlannedByChild(data.plannedByChild);
     setSettings(data.settings);
   }, []);
 
   const resetEverything = useCallback(async () => {
     await clearAllStorage();
-    setChild(null);
-    setRecords([]);
+    setChildren([]);
+    setSelectedChildId(null);
+    setAllRecords([]);
+    setPlannedByChild({});
     setSettings(DEFAULT_SETTINGS);
-    setPlannedDates({});
   }, []);
 
-  // Which vaccines to track — the parent's selection, or the sensible default.
-  const activeVaccineIds = useMemo(
-    () => settings.activeVaccineIds ?? defaultActiveVaccineIds(),
-    [settings.activeVaccineIds]
+  // ---- Selected child's derived data --------------------------------------
+
+  const records = useMemo(
+    () => allRecords.filter((r) => r.childId === selectedChildId),
+    [allRecords, selectedChildId]
   );
 
-  // Recompute the schedule whenever the child, records, selection, or booked
-  // appointments change.
+  const activeVaccineIds = useMemo(
+    () => child?.activeVaccineIds ?? defaultActiveVaccineIds(),
+    [child]
+  );
+
+  const plannedDates = useMemo(
+    () => (selectedChildId ? plannedByChild[selectedChildId] ?? {} : {}),
+    [plannedByChild, selectedChildId]
+  );
+
   const schedule = useMemo(
     () => (child ? computeSchedule(child, records, activeVaccineIds, plannedDates) : []),
     [child, records, activeVaccineIds, plannedDates]
   );
-  const summary = useMemo(
-    () => (child ? summarize(schedule) : null),
-    [child, schedule]
+
+  const summary = useMemo(() => (child ? summarize(schedule) : null), [child, schedule]);
+
+  // Every child's schedule — used to schedule reminders across all children.
+  const allSchedules = useMemo<ChildSchedule[]>(
+    () =>
+      children.map((c) => ({
+        child: c,
+        schedule: computeSchedule(
+          c,
+          allRecords.filter((r) => r.childId === c.id),
+          c.activeVaccineIds ?? defaultActiveVaccineIds(),
+          plannedByChild[c.id] ?? {}
+        ),
+      })),
+    [children, allRecords, plannedByChild]
   );
 
   const value: AppState = {
     loading,
+    children,
     child,
+    selectedChildId,
+    selectChild,
+    addChild,
+    saveChild,
+    deleteChild,
     records,
-    settings,
     schedule,
     summary,
     activeVaccineIds,
     plannedDates,
-    saveChild,
+    allSchedules,
+    settings,
     upsertRecord,
     deleteRecord,
     saveSettings,
     setPlannedDate,
+    buildBackupData,
     restoreFromBackup,
     resetEverything,
   };

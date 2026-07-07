@@ -16,5 +16,7 @@ export type RootStackParamList = {
   // Book or edit a planned appointment date for a pending dose.
   PlanDose: { vaccineId: string; doseNumber: number };
   ManageVaccines: undefined;
-  EditChild: undefined;
+  // add: true creates a new child; otherwise edits the selected child.
+  EditChild: { add?: boolean } | undefined;
+  Children: undefined;
 };

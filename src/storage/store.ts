@@ -1,101 +1,153 @@
 // On-device persistence via AsyncStorage. Everything stays on the phone —
 // no accounts, no network, fully private. This module is the single source of
-// truth for reading/writing the child, dose records, and settings.
+// truth for the children list, their dose records, planned appointments, and
+// app settings, and it migrates data saved by the older single-child version.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Child, DoseRecord, PlannedDoses, Settings, DEFAULT_SETTINGS } from '../data/types';
+import {
+  Child,
+  DoseRecord,
+  PlannedByChild,
+  PlannedDoses,
+  Settings,
+  DEFAULT_SETTINGS,
+} from '../data/types';
 
 const KEYS = {
-  child: 'vx.child',
+  children: 'vx.children',
+  selected: 'vx.selectedChild',
   records: 'vx.records',
-  settings: 'vx.settings',
   planned: 'vx.planned',
+  settings: 'vx.settings',
+  // Legacy single-child key, migrated on first load.
+  legacyChild: 'vx.child',
 };
 
 /** Simple id generator that doesn't need a native crypto dependency. */
 export function makeId(): string {
-  return (
-    Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
-  );
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-// ---- Child -----------------------------------------------------------------
-
-export async function getChild(): Promise<Child | null> {
-  const raw = await AsyncStorage.getItem(KEYS.child);
-  return raw ? (JSON.parse(raw) as Child) : null;
+/** The full persisted state, loaded/saved as one bundle. */
+export interface AppData {
+  children: Child[];
+  selectedChildId: string | null;
+  records: DoseRecord[];
+  plannedByChild: PlannedByChild;
+  settings: Settings;
 }
 
-export async function saveChild(child: Child): Promise<void> {
-  await AsyncStorage.setItem(KEYS.child, JSON.stringify(child));
+const EMPTY: AppData = {
+  children: [],
+  selectedChildId: null,
+  records: [],
+  plannedByChild: {},
+  settings: DEFAULT_SETTINGS,
+};
+
+async function readJSON<T>(key: string, fallback: T): Promise<T> {
+  const raw = await AsyncStorage.getItem(key);
+  return raw ? (JSON.parse(raw) as T) : fallback;
 }
 
-// ---- Dose records ----------------------------------------------------------
+/**
+ * Load everything, migrating a legacy single-child layout the first time.
+ * Legacy layout: vx.child (a Child), vx.records (no childId), vx.planned (a flat
+ * PlannedDoses), and vx.settings.activeVaccineIds.
+ */
+export async function loadAppData(): Promise<AppData> {
+  const childrenRaw = await AsyncStorage.getItem(KEYS.children);
+  const settings = await readJSON<Settings>(KEYS.settings, DEFAULT_SETTINGS);
 
-export async function getRecords(): Promise<DoseRecord[]> {
-  const raw = await AsyncStorage.getItem(KEYS.records);
-  return raw ? (JSON.parse(raw) as DoseRecord[]) : [];
+  if (childrenRaw) {
+    const children = JSON.parse(childrenRaw) as Child[];
+    const records = await readJSON<DoseRecord[]>(KEYS.records, []);
+    const plannedByChild = await readJSON<PlannedByChild>(KEYS.planned, {});
+    let selectedChildId = await AsyncStorage.getItem(KEYS.selected);
+    if (!selectedChildId || !children.some((c) => c.id === selectedChildId)) {
+      selectedChildId = children[0]?.id ?? null;
+    }
+    return {
+      children,
+      selectedChildId,
+      records,
+      plannedByChild,
+      settings: { ...DEFAULT_SETTINGS, ...settings },
+    };
+  }
+
+  // --- Migrate from the single-child layout, if present ---
+  const legacyChildRaw = await AsyncStorage.getItem(KEYS.legacyChild);
+  if (legacyChildRaw) {
+    const legacyChild = JSON.parse(legacyChildRaw) as Child;
+    if (settings.activeVaccineIds && !legacyChild.activeVaccineIds) {
+      legacyChild.activeVaccineIds = settings.activeVaccineIds;
+    }
+    const legacyRecords = await readJSON<DoseRecord[]>(KEYS.records, []);
+    const legacyPlanned = await readJSON<PlannedDoses>(KEYS.planned, {});
+    const migrated: AppData = {
+      children: [legacyChild],
+      selectedChildId: legacyChild.id,
+      records: legacyRecords.map((r) => ({ ...r, childId: r.childId ?? legacyChild.id })),
+      plannedByChild: { [legacyChild.id]: legacyPlanned },
+      settings: { remindersEnabled: settings.remindersEnabled, reminderLeadDays: settings.reminderLeadDays },
+    };
+    await persistAll(migrated);
+    await AsyncStorage.removeItem(KEYS.legacyChild);
+    return migrated;
+  }
+
+  return EMPTY;
 }
 
-async function saveRecords(records: DoseRecord[]): Promise<void> {
+async function persistAll(data: AppData): Promise<void> {
+  const pairs: [string, string][] = [
+    [KEYS.children, JSON.stringify(data.children)],
+    [KEYS.records, JSON.stringify(data.records)],
+    [KEYS.planned, JSON.stringify(data.plannedByChild)],
+    [KEYS.settings, JSON.stringify(data.settings)],
+  ];
+  await AsyncStorage.multiSet(pairs);
+  if (data.selectedChildId) await AsyncStorage.setItem(KEYS.selected, data.selectedChildId);
+  else await AsyncStorage.removeItem(KEYS.selected);
+}
+
+// ---- Granular savers -------------------------------------------------------
+
+export async function saveChildren(children: Child[]): Promise<void> {
+  await AsyncStorage.setItem(KEYS.children, JSON.stringify(children));
+}
+
+export async function saveSelectedChildId(id: string | null): Promise<void> {
+  if (id) await AsyncStorage.setItem(KEYS.selected, id);
+  else await AsyncStorage.removeItem(KEYS.selected);
+}
+
+export async function saveRecords(records: DoseRecord[]): Promise<void> {
   await AsyncStorage.setItem(KEYS.records, JSON.stringify(records));
 }
 
-export async function upsertRecord(record: DoseRecord): Promise<DoseRecord[]> {
-  const records = await getRecords();
-  const idx = records.findIndex((r) => r.id === record.id);
-  if (idx >= 0) records[idx] = record;
-  else records.push(record);
-  await saveRecords(records);
-  return records;
-}
-
-export async function deleteRecord(id: string): Promise<DoseRecord[]> {
-  const records = (await getRecords()).filter((r) => r.id !== id);
-  await saveRecords(records);
-  return records;
-}
-
-// ---- Planned appointment dates ---------------------------------------------
-
-export async function getPlanned(): Promise<PlannedDoses> {
-  const raw = await AsyncStorage.getItem(KEYS.planned);
-  return raw ? (JSON.parse(raw) as PlannedDoses) : {};
-}
-
-export async function savePlanned(planned: PlannedDoses): Promise<void> {
+export async function savePlannedByChild(planned: PlannedByChild): Promise<void> {
   await AsyncStorage.setItem(KEYS.planned, JSON.stringify(planned));
-}
-
-// ---- Settings --------------------------------------------------------------
-
-export async function getSettings(): Promise<Settings> {
-  const raw = await AsyncStorage.getItem(KEYS.settings);
-  return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
   await AsyncStorage.setItem(KEYS.settings, JSON.stringify(settings));
 }
 
-// ---- Danger zone -----------------------------------------------------------
+// ---- Restore / danger zone -------------------------------------------------
 
-export async function clearAll(): Promise<void> {
-  await AsyncStorage.multiRemove([KEYS.child, KEYS.records, KEYS.settings, KEYS.planned]);
+export async function restoreAll(data: AppData): Promise<void> {
+  await persistAll(data);
 }
 
-/** Overwrite every stored value from an imported backup. */
-export async function restoreAll(data: {
-  child: Child | null;
-  records: DoseRecord[];
-  plannedDates: PlannedDoses;
-  settings: Settings;
-}): Promise<void> {
-  await AsyncStorage.multiSet([
-    [KEYS.records, JSON.stringify(data.records)],
-    [KEYS.planned, JSON.stringify(data.plannedDates)],
-    [KEYS.settings, JSON.stringify(data.settings)],
+export async function clearAll(): Promise<void> {
+  await AsyncStorage.multiRemove([
+    KEYS.children,
+    KEYS.selected,
+    KEYS.records,
+    KEYS.planned,
+    KEYS.settings,
+    KEYS.legacyChild,
   ]);
-  if (data.child) await AsyncStorage.setItem(KEYS.child, JSON.stringify(data.child));
-  else await AsyncStorage.removeItem(KEYS.child);
 }

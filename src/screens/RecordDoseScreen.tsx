@@ -54,6 +54,7 @@ export function RecordDoseScreen({ route, navigation }: Props) {
     if (!canSave) return;
     await upsertRecord({
       id: existing?.id ?? makeId(),
+      childId: existing?.childId ?? child?.id ?? '',
       vaccineId: vaccineId!,
       doseNumber: doseNumber!,
       dateAdministered: date,

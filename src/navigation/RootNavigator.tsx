@@ -19,6 +19,7 @@ import { VaccineDetailScreen } from '../screens/VaccineDetailScreen';
 import { RecordDoseScreen } from '../screens/RecordDoseScreen';
 import { PlanDoseScreen } from '../screens/PlanDoseScreen';
 import { EditChildScreen } from '../screens/EditChildScreen';
+import { ChildrenScreen } from '../screens/ChildrenScreen';
 import { ManageVaccinesScreen } from '../screens/ManageVaccinesScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -71,14 +72,17 @@ function Tabs() {
 }
 
 export function RootNavigator() {
-  const { loading, child, settings, schedule } = useApp();
+  const { loading, child, settings, allSchedules } = useApp();
 
-  // Keep reminders in sync with the current schedule when they're enabled.
+  // Keep reminders in sync with every child's schedule when they're enabled.
   useEffect(() => {
-    if (child && settings.remindersEnabled) {
-      rescheduleReminders(child.name, schedule, settings.reminderLeadDays);
+    if (settings.remindersEnabled && allSchedules.length > 0) {
+      rescheduleReminders(
+        allSchedules.map((s) => ({ childName: s.child.name, schedule: s.schedule })),
+        settings.reminderLeadDays
+      );
     }
-  }, [child, settings.remindersEnabled, settings.reminderLeadDays, schedule]);
+  }, [settings.remindersEnabled, settings.reminderLeadDays, allSchedules]);
 
   if (loading) {
     return (
@@ -119,6 +123,11 @@ export function RootNavigator() {
             options={{ title: 'Plan appointment', presentation: 'modal' }}
           />
           <Stack.Screen name="EditChild" component={EditChildScreen} options={{ title: 'Edit profile' }} />
+          <Stack.Screen
+            name="Children"
+            component={ChildrenScreen}
+            options={{ title: 'Children', presentation: 'modal' }}
+          />
           <Stack.Screen
             name="ManageVaccines"
             component={ManageVaccinesScreen}

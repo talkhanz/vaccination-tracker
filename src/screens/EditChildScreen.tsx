@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,9 +9,15 @@ import { colors, spacing } from '../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditChild'>;
 
-export function EditChildScreen({ navigation }: Props) {
-  const { child, saveChild } = useApp();
-  if (!child) return null;
+export function EditChildScreen({ route, navigation }: Props) {
+  const isAdd = route.params?.add === true;
+  const { child, addChild, saveChild } = useApp();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: isAdd ? 'Add a child' : 'Edit profile' });
+  }, [navigation, isAdd]);
+
+  if (!isAdd && !child) return null;
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -21,10 +27,11 @@ export function EditChildScreen({ navigation }: Props) {
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ChildForm
-            initial={child}
-            submitLabel="Save changes"
+            initial={isAdd ? undefined : child ?? undefined}
+            submitLabel={isAdd ? 'Add child' : 'Save changes'}
             onSubmit={async (next) => {
-              await saveChild(next);
+              if (isAdd) await addChild(next);
+              else await saveChild(next);
               navigation.goBack();
             }}
           />

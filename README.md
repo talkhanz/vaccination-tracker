@@ -10,8 +10,12 @@ Recommended Child & Adolescent Immunization Schedule (2025)**.
 
 ## Features
 
+- **Multiple children** — track all your children in one app. Each child has
+  their own records, vaccine selection, planned appointments, and reminders. Tap
+  the header on the dashboard (or **Settings → Children**) to switch between
+  them or add another.
 - **Dashboard** — completion progress, overdue/due-soon alerts, and a "next up"
-  card with a one-tap way to record the dose.
+  card with a one-tap way to record the dose, for the selected child.
 - **Schedule** — browse every vaccine by series or along an age timeline, each
   dose tagged Done / Overdue / Due soon / Upcoming with its recommended date.
 - **Timeline** — two toggleable views of every dose across time:
@@ -300,8 +304,8 @@ src/
   state/AppContext.tsx# app-wide state + derived schedule
   components/          # Card, Button, DoseRow, DateField, ChildForm, ...
   screens/            # Dashboard, Schedule, Timeline, VaccineDetail, RecordDose,
-                      #   PlanDose, History, Settings, EditChild, ManageVaccines,
-                      #   Onboarding
+                      #   PlanDose, History, Settings, Children, EditChild,
+                      #   ManageVaccines, Onboarding
   navigation/         # tab + stack wiring
 theme/theme.ts        # colors, spacing, typography tokens
 ```

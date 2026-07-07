@@ -8,8 +8,9 @@ import { colors, radius, spacing, typography } from '../theme/theme';
 import { Card } from '../components/ui';
 
 export function ManageVaccinesScreen() {
-  const { settings, activeVaccineIds, saveSettings } = useApp();
+  const { child, activeVaccineIds, saveChild } = useApp();
   const active = new Set(activeVaccineIds);
+  if (!child) return null;
 
   const toggle = (id: string, value: boolean) => {
     const next = new Set(active);
@@ -25,15 +26,15 @@ export function ManageVaccinesScreen() {
     } else {
       next.delete(id);
     }
-    saveSettings({ ...settings, activeVaccineIds: Array.from(next) });
+    saveChild({ ...child, activeVaccineIds: Array.from(next) });
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Turn vaccines on or off to match what applies to your child. Progress and
-          reminders only count the vaccines you track here.
+          Turn vaccines on or off to match what applies to {child.name}. Progress
+          and reminders only count the vaccines you track here.
         </Text>
         <Card style={styles.card}>
           {CDC_SCHEDULE.map((v, i) => {

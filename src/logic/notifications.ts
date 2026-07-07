@@ -41,13 +41,18 @@ export async function requestPermission(): Promise<boolean> {
   }
 }
 
+/** One child's name paired with their schedule, for reminder scheduling. */
+export interface ReminderChild {
+  childName: string;
+  schedule: DoseSchedule[];
+}
+
 /**
- * Reschedule all reminders: one local notification `leadDays` before each
- * not-yet-completed dose's due date, for doses due in the future.
+ * Reschedule all reminders across every child: one local notification
+ * `leadDays` before each not-yet-completed dose's due (or booked) date.
  */
 export async function rescheduleReminders(
-  childName: string,
-  schedule: DoseSchedule[],
+  entries: ReminderChild[],
   leadDays: number
 ): Promise<void> {
   const N = getModule();
@@ -55,26 +60,29 @@ export async function rescheduleReminders(
   try {
     await N.cancelAllScheduledNotificationsAsync();
     const now = new Date();
-    const pending = schedule
-      .filter((s) => s.status === 'dueSoon' || s.status === 'upcoming')
-      .slice(0, 30); // keep well under OS scheduled-notification limits
+    let scheduled = 0;
+    const LIMIT = 60; // keep well under OS scheduled-notification limits
 
-    for (const item of pending) {
-      // Remind ahead of the booked appointment if there is one, else the due date.
-      const target = effectiveDate(item);
-      const fire = new Date(target.getTime());
-      fire.setDate(fire.getDate() - leadDays);
-      if (fire.getTime() <= now.getTime()) continue;
-      const kind = item.plannedDate ? 'appointment' : 'is recommended around';
-      await N.scheduleNotificationAsync({
-        content: {
-          title: `${childName}'s vaccine coming up`,
-          body: item.plannedDate
-            ? `${item.vaccine.name} — ${item.dose.label} appointment on ${toISODate(target)}.`
-            : `${item.vaccine.name} — ${item.dose.label} ${kind} ${toISODate(target)}.`,
-        },
-        trigger: { type: 'date', date: fire },
-      });
+    for (const { childName, schedule } of entries) {
+      const pending = schedule.filter((s) => s.status === 'dueSoon' || s.status === 'upcoming');
+      for (const item of pending) {
+        if (scheduled >= LIMIT) return;
+        // Remind ahead of the booked appointment if there is one, else the due date.
+        const target = effectiveDate(item);
+        const fire = new Date(target.getTime());
+        fire.setDate(fire.getDate() - leadDays);
+        if (fire.getTime() <= now.getTime()) continue;
+        await N.scheduleNotificationAsync({
+          content: {
+            title: `${childName}'s vaccine coming up`,
+            body: item.plannedDate
+              ? `${item.vaccine.name} — ${item.dose.label} appointment on ${toISODate(target)}.`
+              : `${item.vaccine.name} — ${item.dose.label} is recommended around ${toISODate(target)}.`,
+          },
+          trigger: { type: 'date', date: fire },
+        });
+        scheduled += 1;
+      }
     }
   } catch {
     // Reminders are best-effort; never surface scheduling errors to the user.
