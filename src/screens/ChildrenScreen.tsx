@@ -8,6 +8,7 @@ import { RootStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography } from '../theme/theme';
 import { Button, Card, ProgressBar } from '../components/ui';
 import { formatAge, parseISO } from '../logic/dates';
+import { childColor } from '../logic/avatar';
 import { summarize } from '../logic/scheduling';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Children'>;
@@ -52,7 +53,7 @@ export function ChildrenScreen({ navigation }: Props) {
           return (
             <Card key={c.id} style={[styles.card, selected && styles.cardSelected]}>
               <Pressable style={styles.row} onPress={() => switchTo(c.id)}>
-                <View style={[styles.avatar, selected && styles.avatarSelected]}>
+                <View style={[styles.avatar, { backgroundColor: childColor(c) }]}>
                   <Text style={styles.avatarText}>
                     {c.name.trim().charAt(0).toUpperCase() || '?'}
                   </Text>

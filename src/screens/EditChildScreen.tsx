@@ -5,13 +5,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useApp } from '../state/AppContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChildForm } from '../components/ChildForm';
+import { suggestColor } from '../logic/avatar';
 import { colors, spacing } from '../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditChild'>;
 
 export function EditChildScreen({ route, navigation }: Props) {
   const isAdd = route.params?.add === true;
-  const { child, addChild, saveChild } = useApp();
+  const { child, children, addChild, saveChild } = useApp();
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: isAdd ? 'Add a child' : 'Edit profile' });
@@ -29,6 +30,7 @@ export function EditChildScreen({ route, navigation }: Props) {
           <ChildForm
             initial={isAdd ? undefined : child ?? undefined}
             submitLabel={isAdd ? 'Add child' : 'Save changes'}
+            defaultColor={isAdd ? suggestColor(children) : undefined}
             onSubmit={async (next) => {
               if (isAdd) await addChild(next);
               else await saveChild(next);

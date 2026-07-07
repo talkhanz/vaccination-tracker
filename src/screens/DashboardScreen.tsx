@@ -11,6 +11,7 @@ import { colors, radius, spacing, typography, shadow } from '../theme/theme';
 import { Button, Card, ProgressBar, SectionHeader, STATUS_META } from '../components/ui';
 import { DoseRow } from '../components/DoseRow';
 import { formatAge, formatRelative, parseISO } from '../logic/dates';
+import { childColor } from '../logic/avatar';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Home'>,
@@ -47,7 +48,7 @@ export function DashboardScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('Children')}
           accessibilityRole="button"
         >
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, { backgroundColor: childColor(child) }]}>
             <Text style={styles.avatarText}>{initial}</Text>
           </View>
           <View style={{ flex: 1 }}>

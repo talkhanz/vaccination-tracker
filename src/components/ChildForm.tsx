@@ -2,9 +2,10 @@
 // edit screen so validation and layout stay identical.
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Child } from '../data/types';
-import { colors, radius, spacing, typography } from '../theme/theme';
+import { avatarColors, colors, radius, spacing, typography } from '../theme/theme';
 import { isValidBirthDate } from '../logic/validation';
 import { DateField } from './DateField';
 import { TextField } from './TextField';
@@ -16,15 +17,18 @@ type Sex = NonNullable<Child['sex']>;
 export function ChildForm({
   initial,
   submitLabel,
+  defaultColor,
   onSubmit,
 }: {
   initial?: Child;
   submitLabel: string;
+  defaultColor?: string;
   onSubmit: (child: Child) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [birthDate, setBirthDate] = useState(initial?.birthDate ?? '');
   const [sex, setSex] = useState<Sex>(initial?.sex ?? 'unspecified');
+  const [color, setColor] = useState(initial?.color ?? defaultColor ?? avatarColors[0]);
 
   const nameOk = name.trim().length > 0;
   const dateOk = isValidBirthDate(birthDate);
@@ -37,6 +41,7 @@ export function ChildForm({
       name: name.trim(),
       birthDate,
       sex,
+      color,
     });
   };
 
@@ -78,6 +83,24 @@ export function ChildForm({
         })}
       </View>
 
+      <Text style={styles.label}>Color</Text>
+      <View style={styles.colorRow}>
+        <View style={[styles.preview, { backgroundColor: color }]}>
+          <Text style={styles.previewText}>{name.trim().charAt(0).toUpperCase() || '?'}</Text>
+        </View>
+        <View style={styles.swatches}>
+          {avatarColors.map((c) => (
+            <Pressable
+              key={c}
+              onPress={() => setColor(c)}
+              style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchActive]}
+            >
+              {color === c ? <Ionicons name="checkmark" size={16} color={colors.white} /> : null}
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
       <Button
         title={submitLabel}
         onPress={submit}
@@ -117,4 +140,17 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   hint: { ...typography.small, color: colors.overdue, marginTop: spacing.sm, textAlign: 'center' },
+
+  colorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
+  preview: {
+    width: 48, height: 48, borderRadius: radius.pill,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  previewText: { color: colors.white, fontSize: 20, fontWeight: '700' },
+  swatches: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  swatch: {
+    width: 32, height: 32, borderRadius: radius.pill,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  swatchActive: { borderWidth: 3, borderColor: colors.text },
 });

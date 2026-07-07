@@ -28,6 +28,19 @@ export const colors = {
   white: '#FFFFFF',
 };
 
+// Distinct, friendly avatar colors for telling children apart (white text reads
+// clearly on all of them).
+export const avatarColors = [
+  '#0E7C86', // teal
+  '#3B82C4', // blue
+  '#7C5CBF', // purple
+  '#C0508E', // magenta
+  '#E5734E', // coral
+  '#2E9E5B', // green
+  '#C0902A', // gold
+  '#5B7A8C', // slate
+];
+
 export const spacing = {
   xs: 4,
   sm: 8,

@@ -9,6 +9,8 @@ export interface Child {
   birthDate: string;
   /** Optional — some vaccines have sex-specific notes, but not required. */
   sex?: 'female' | 'male' | 'unspecified';
+  /** Avatar color (hex) so siblings are easy to tell apart. */
+  color?: string;
   /**
    * Which vaccines are tracked for this child. Undefined means "use the default
    * set" (resolved from vaccineMeta). Per-child because e.g. rotavirus product
