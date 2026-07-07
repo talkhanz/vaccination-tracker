@@ -74,7 +74,7 @@ function Tabs() {
 }
 
 export function RootNavigator() {
-  const { loading, termsAccepted, child, settings, allSchedules } = useApp();
+  const { loading, policiesAccepted, child, settings, allSchedules } = useApp();
 
   // Keep reminders in sync with every child's schedule when they're enabled.
   useEffect(() => {
@@ -96,7 +96,7 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navTheme}>
-      {!termsAccepted ? (
+      {!policiesAccepted ? (
         <TermsGate />
       ) : !child ? (
         <OnboardingScreen />

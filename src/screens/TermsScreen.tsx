@@ -32,7 +32,7 @@ function TermsDoc({ logo }: { logo?: boolean }) {
 
 /** The acceptance gate shown before the rest of the app is usable. */
 export function TermsGate() {
-  const { acceptTerms } = useApp();
+  const { acceptPolicies } = useApp();
   const [agreed, setAgreed] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
@@ -60,13 +60,13 @@ export function TermsGate() {
             {agreed ? <Ionicons name="checkmark" size={16} color={colors.white} /> : null}
           </View>
           <Text style={styles.checkLabel}>
-            I have read and agree to the Terms of Use, and understand this app
-            does not provide medical advice.
+            I have read and agree to the Terms of Use and Privacy Policy, and
+            understand this app does not provide medical advice.
           </Text>
         </Pressable>
         <Button
           title="Agree & Continue"
-          onPress={acceptTerms}
+          onPress={acceptPolicies}
           disabled={!agreed}
           icon={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
         />

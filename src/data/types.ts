@@ -51,6 +51,8 @@ export interface Settings {
   reminderLeadDays: number;
   /** The TERMS_VERSION the parent has accepted; undefined until they accept. */
   termsAcceptedVersion?: number;
+  /** The PRIVACY_VERSION the parent has accepted; undefined until they accept. */
+  privacyAcceptedVersion?: number;
   /**
    * Legacy single-child vaccine selection. Kept only so old data / backups can
    * migrate onto the child; no longer written. See Child.activeVaccineIds.

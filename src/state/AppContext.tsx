@@ -38,6 +38,7 @@ import {
 } from '../logic/scheduling';
 import { defaultActiveVaccineIds } from '../data/vaccineMeta';
 import { TERMS_VERSION } from '../data/terms';
+import { PRIVACY_VERSION } from '../data/privacy';
 
 /** A child paired with their computed schedule (used for reminders). */
 export interface ChildSchedule {
@@ -48,9 +49,9 @@ export interface ChildSchedule {
 interface AppState {
   loading: boolean;
 
-  // Terms of Use gate
-  termsAccepted: boolean;
-  acceptTerms: () => Promise<void>;
+  // Terms of Use + Privacy Policy gate
+  policiesAccepted: boolean;
+  acceptPolicies: () => Promise<void>;
 
   // Children
   children: Child[];
@@ -194,11 +195,17 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
     setSettings(next);
   }, []);
 
-  const termsAccepted = settings.termsAcceptedVersion === TERMS_VERSION;
+  const policiesAccepted =
+    settings.termsAcceptedVersion === TERMS_VERSION &&
+    settings.privacyAcceptedVersion === PRIVACY_VERSION;
 
-  const acceptTerms = useCallback(async () => {
+  const acceptPolicies = useCallback(async () => {
     setSettings((prev) => {
-      const next = { ...prev, termsAcceptedVersion: TERMS_VERSION };
+      const next = {
+        ...prev,
+        termsAcceptedVersion: TERMS_VERSION,
+        privacyAcceptedVersion: PRIVACY_VERSION,
+      };
       saveSettingsStorage(next);
       return next;
     });
@@ -290,8 +297,8 @@ export function AppProvider({ children: node }: { children: React.ReactNode }) {
 
   const value: AppState = {
     loading,
-    termsAccepted,
-    acceptTerms,
+    policiesAccepted,
+    acceptPolicies,
     children,
     child,
     selectedChildId,

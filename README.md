@@ -43,10 +43,11 @@ Recommended Child & Adolescent Immunization Schedule (2025)**.
   survives reinstalling the app or moving to a new phone.
 - **Private by design** — all data is stored only on the device via
   AsyncStorage. No account, no server, no network calls for your data.
-- **Terms of Use gate** — on first launch parents must read and accept the Terms
-  of Use (informational-only, not medical advice, data responsibility, etc.)
-  before using the app. Re-accepting is required if the terms change. A
-  **Privacy Policy** is linked from the gate and from Settings.
+- **Terms + Privacy gate** — on first launch parents must read and accept the
+  **Terms of Use and Privacy Policy** (informational-only, not medical advice,
+  data responsibility, on-device privacy, etc.) before using the app. The
+  Privacy Policy is readable right from the gate (and Settings); re-accepting is
+  required if either document's version changes.
 
 ## Running the app
 
