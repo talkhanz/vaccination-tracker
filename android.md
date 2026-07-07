@@ -67,6 +67,11 @@ You have two ways to update the installed app:
   ```bash
   eas update --branch preview --message "what changed"
   ```
+  > **"Select environment" prompt** — choose **`preview`** to match the `preview`
+  > branch (`development` is for local dev; `production` is for a live release).
+  > It only selects which EAS environment variables are used when bundling; this
+  > app defines none, so the choice is about consistency. Skip the prompt next
+  > time with `eas update --branch preview --environment preview --message "..."`.
 - **Native changes** (new native module, app icon, permissions, SDK bump) — build
   and install a fresh APK (repeat the two steps above). Installing the new APK
   over the old one keeps your data, because EAS reuses the same signing key.

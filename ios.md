@@ -51,13 +51,32 @@ eas update --branch preview --message "ios test"
 1. Install **Expo Go** from the App Store.
 2. Open Expo Go and **sign in with the same Expo account** that owns the project
    (needed to open your own published update).
-3. Open the update: go to <https://expo.dev> → your project → **Updates** → the
-   latest update, and scan its QR with the iPhone **Camera** app (or tap "Open
-   with Expo Go"). The QR that `eas update` printed also works.
+3. Open the published update in Expo Go using **either** method below. Both point
+   Expo Go at the bundle you just uploaded so it downloads and runs it:
+
+   **Method A — scan the QR from your terminal (quickest).** Right after
+   `eas update` finishes, it prints a **QR code and a URL** in the terminal.
+   Point the iPhone's **Camera** app at that QR (no need to open anything first);
+   a banner drops down at the top of the screen — tap it to open in Expo Go.
+
+   **Method B — from the Expo dashboard.** On a computer, open
+   <https://expo.dev>, sign in, and select your project (e.g. `vaccinator`). In
+   the left sidebar open **Updates** (updates are grouped by branch); open the
+   **preview** branch and select the most recent update. That page shows a **QR
+   code** — scan it with the iPhone **Camera** app and tap the banner.
+
+   *Why the Camera app?* On iPhone, Expo Go has no built-in QR scanner, so you
+   scan with the system **Camera**, which deep-links into Expo Go. (On Android,
+   Expo Go itself has a "Scan QR code" button.)
+
+   *What you'll see:* Expo Go opens, shows a brief loading/progress screen while
+   it downloads the bundle from Expo's cloud, then launches Vaccinator.
 4. Tap **Allow** if it asks for notification permission (for reminders).
 
-It downloads from Expo's cloud and runs — no computer needed. To ship changes,
-run `eas update` again; the next launch picks them up.
+It downloads from Expo's cloud and runs — no computer needed. After the first
+open, Vaccinator appears under **Recently opened** in Expo Go, so you can
+relaunch it without scanning again. To ship changes, run `eas update` again; the
+next launch picks them up.
 
 ## Option 2 — Expo Go via the dev server (quick local testing)
 
