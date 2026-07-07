@@ -248,6 +248,9 @@ eas login
 eas build --profile preview --platform android   # or: --platform ios
 ```
 
+> **Android — full step-by-step:** to install Vaccinator as a standalone app on
+> an Android phone (build an APK and sideload it), see **[android.md](android.md)**.
+
 > Note: iOS builds/installs require an Apple Developer account; Android `.apk`
 > builds can be installed directly on a device.
 
