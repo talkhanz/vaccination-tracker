@@ -84,6 +84,21 @@ You have two ways to update the installed app:
 - **Wrong Expo account owns the build** — check with `eas whoami`; use
   `eas logout` then `eas login` to switch.
 
+## Is this private?
+
+- **Your data — yes.** Your children's records never leave the device. The app
+  has no account or server and makes no network calls with your data; EAS only
+  builds/hosts the app's *code*, never the data you enter. Data leaves the device
+  only when you export a backup or open a CDC.gov link.
+- **The app — effectively private.** It isn't published to any app store, so it's
+  not listed or searchable. Your Expo project/dashboard is private to your
+  account. The build's **download link is unguessable but not password-protected**
+  — treat it like a private link and only share it with people you want to have
+  the app.
+- **Want zero third parties touching even the code?** Build locally with Android
+  Studio (`npx expo run:android`) instead of EAS, and keep your source off any
+  public repo.
+
 ## Notes
 
 - Your data lives **only on the device**. Before reinstalling or switching
